@@ -1,0 +1,156 @@
+// Vault crypto: PBKDF2 (SHA-256, 600k iterations — OWASP baseline) key
+// derivation, AES-GCM wrap/unwrap for the Data Encryption Key (DEK), and
+// AES-GCM secret encryption. All primitives are WebCrypto — no extra deps.
+//
+// Design:
+// - Passphrase + per-user salt → KEK (256-bit AES-GCM).
+// - Random 256-bit DEK is generated once, wrapped by KEK, stored server-side
+//   as `vault_meta.recovery_wrapped_key` (+ iv).
+// - Every TOTP secret is encrypted with the DEK using AES-GCM (fresh iv).
+// - Passphrase never leaves the device. Losing it = permanent code loss.
+//
+// PBKDF2 is a pragmatic default (native, no WASM). Argon2id can drop in
+// later by swapping deriveKekFromPassphrase without changing storage shape.
+
+const PBKDF2_ITERATIONS = 600_000;
+const KDF_ALGO = "PBKDF2-SHA256-600k";
+
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+export const KDF_ALGORITHM = KDF_ALGO;
+
+export function randomBytes(length: number): Uint8Array {
+  const out = new Uint8Array(length);
+  crypto.getRandomValues(out);
+  return out;
+}
+
+async function deriveKekFromPassphrase(
+  passphrase: string,
+  salt: Uint8Array,
+): Promise<CryptoKey> {
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(passphrase.normalize("NFKC")),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt as unknown as BufferSource,
+      iterations: PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["wrapKey", "unwrapKey", "encrypt", "decrypt"],
+  );
+}
+
+export async function createNewVaultKey(passphrase: string): Promise<{
+  salt: Uint8Array;
+  wrappedKey: Uint8Array;
+  wrappedKeyIv: Uint8Array;
+  dek: CryptoKey;
+  kdfAlgorithm: string;
+}> {
+  const salt = randomBytes(16);
+  const kek = await deriveKekFromPassphrase(passphrase, salt);
+
+  const dek = await crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true, // extractable so we can wrap it
+    ["encrypt", "decrypt"],
+  );
+
+  const iv = randomBytes(12);
+  const wrapped = await crypto.subtle.wrapKey("raw", dek, kek, {
+    name: "AES-GCM",
+    iv: iv as unknown as BufferSource,
+  });
+
+  // Re-import DEK as non-extractable for runtime use.
+  const rawDek = await crypto.subtle.exportKey("raw", dek);
+  const runtimeDek = await crypto.subtle.importKey(
+    "raw",
+    rawDek,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+
+  return {
+    salt,
+    wrappedKey: new Uint8Array(wrapped),
+    wrappedKeyIv: iv,
+    dek: runtimeDek,
+    kdfAlgorithm: KDF_ALGO,
+  };
+}
+
+export async function unwrapVaultKey(
+  passphrase: string,
+  salt: Uint8Array,
+  wrappedKey: Uint8Array,
+  wrappedKeyIv: Uint8Array,
+): Promise<CryptoKey> {
+  const kek = await deriveKekFromPassphrase(passphrase, salt);
+  return crypto.subtle.unwrapKey(
+    "raw",
+    wrappedKey as unknown as BufferSource,
+    kek,
+    { name: "AES-GCM", iv: wrappedKeyIv as unknown as BufferSource },
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+export async function encryptSecret(
+  dek: CryptoKey,
+  plaintext: string,
+): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
+  const iv = randomBytes(12);
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv as unknown as BufferSource },
+    dek,
+    enc.encode(plaintext),
+  );
+  return { ciphertext: new Uint8Array(ct), iv };
+}
+
+export async function decryptSecret(
+  dek: CryptoKey,
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+): Promise<string> {
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: iv as unknown as BufferSource },
+    dek,
+    ciphertext as unknown as BufferSource,
+  );
+  return dec.decode(pt);
+}
+
+// Supabase `bytea` round-trips as either a Uint8Array (already binary) or a
+// hex-prefixed string like "\\x0102..". Normalize both.
+export function toBytes(input: unknown): Uint8Array {
+  if (input instanceof Uint8Array) return input;
+  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  if (typeof input === "string") {
+    const hex = input.startsWith("\\x") ? input.slice(2) : input;
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) {
+      out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    }
+    return out;
+  }
+  if (input && typeof input === "object" && "type" in (input as object) && (input as { type?: string }).type === "Buffer") {
+    return new Uint8Array((input as { data: number[] }).data);
+  }
+  throw new Error("Unsupported bytea payload");
+}
