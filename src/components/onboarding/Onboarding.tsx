@@ -295,17 +295,7 @@ function IconChip({ children, size = 40 }: { children: ReactNode; size?: number 
 /* ------------------------------------------------------------------ */
 
 function Screen({ children }: { children: ReactNode }) {
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-      transition={{ duration: 0.42, ease: [0.22, 0.9, 0.3, 1] }}
-      className="flex h-full w-full flex-col px-6"
-    >
-      {children}
-    </motion.section>
-  );
+  return <section className="flex h-full w-full flex-col px-6">{children}</section>;
 }
 
 /* ------------------------------------------------------------------ */
