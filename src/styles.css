@@ -192,3 +192,29 @@
 .aegis-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(28, 28, 28, 0.28);
 }
+
+/* Hide scrollbar entirely for premium feel */
+.aegis-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aegis-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* Scroll-driven fade for headers / sections (Chrome, Edge, Safari 26+) */
+@supports (animation-timeline: view()) {
+  .scroll-fade-out {
+    animation: scroll-fade-out linear both;
+    animation-timeline: view();
+    animation-range: exit 0% exit 70%;
+  }
+  .scroll-fade-in {
+    animation: scroll-fade-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 15%;
+  }
+}
+@keyframes scroll-fade-out {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateY(-14px) scale(0.985); filter: blur(2px); }
+}
+@keyframes scroll-fade-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
