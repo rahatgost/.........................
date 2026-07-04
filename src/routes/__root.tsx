@@ -122,10 +122,14 @@ function RootComponent() {
 
   useEffect(() => {
     let mounted = true;
-    import("@/integrations/supabase/client").then(({ supabase }) => {
+    Promise.all([
+      import("@/integrations/supabase/client"),
+      import("@/lib/vault-session"),
+    ]).then(([{ supabase }, { lockVault }]) => {
       if (!mounted) return;
       const { data } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+        if (event === "SIGNED_OUT") lockVault();
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       });
