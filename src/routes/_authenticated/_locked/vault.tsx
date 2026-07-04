@@ -81,14 +81,8 @@ function VaultPage() {
 
   return (
     <AegisScreen>
-      <BrandBar
-        right={
-          <div className="flex items-center gap-1">
-            <IconAction onClick={lockNow} icon={<Lock className="h-3.5 w-3.5" strokeWidth={1.8} />} label="Lock" />
-            <IconAction onClick={signOut} icon={<LogOut className="h-3.5 w-3.5" strokeWidth={1.8} />} label="Sign out" />
-          </div>
-        }
-      />
+      <BrandBar right={<AegisMenu userEmail={user.email} />} />
+
 
       <motion.div
         initial={{ opacity: 0, y: 6 }}
