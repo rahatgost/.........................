@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#F8F9FB" },
+      { name: "theme-color", content: "#f7f4ed" },
       { title: "Aegis — Security that simply works" },
       { name: "description", content: "Aegis is a beautifully minimal authenticator that protects every account with secure one-time codes." },
       { property: "og:title", content: "Aegis — Security that simply works" },
