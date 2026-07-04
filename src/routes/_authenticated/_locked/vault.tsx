@@ -66,18 +66,6 @@ function VaultPage() {
     };
   }, [unlocked]);
 
-  const signOut = async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    lockVault();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  };
-
-  const lockNow = () => {
-    lockVault();
-    navigate({ to: "/lock" });
-  };
 
   return (
     <AegisScreen>
