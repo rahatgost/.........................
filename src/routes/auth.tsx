@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { Mail, Lock, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 import {
   AegisScreen,
   BrandBar,
@@ -24,6 +24,9 @@ import {
   inputStyle,
   soft,
 } from "@/components/aegis/chrome";
+import { PasswordField, StrengthMeter, scoreStrength } from "@/components/aegis/password-field";
+
+const LAST_EMAIL_KEY = "aegis.auth.lastEmail";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -45,10 +48,17 @@ function AuthPage() {
   const [notice, setNotice] = useState<{ kind: "error" | "info"; text: string } | null>(null);
 
   useEffect(() => {
+    try {
+      const last = window.localStorage.getItem(LAST_EMAIL_KEY);
+      if (last) setEmail(last);
+    } catch {
+      /* ignore */
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/", replace: true });
     });
   }, [navigate]);
+
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +85,26 @@ function AuthPage() {
         if (error) throw error;
         setNotice({ kind: "info", text: "Check your inbox for a reset link." });
       }
+      try {
+        window.localStorage.setItem(LAST_EMAIL_KEY, email);
+      } catch {
+        /* ignore */
+      }
     } catch (err) {
-      setNotice({ kind: "error", text: err instanceof Error ? err.message : "Something went wrong." });
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      const friendly = /invalid.*credent|invalid.*login/i.test(raw)
+        ? "Email or password is incorrect."
+        : /rate limit|too many/i.test(raw)
+          ? "Too many attempts — please wait a moment and try again."
+          : /already.*registered/i.test(raw)
+            ? "An account with that email already exists."
+            : raw;
+      setNotice({ kind: "error", text: friendly });
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleGoogle = async () => {
     setNotice(null);
@@ -156,19 +180,17 @@ function AuthPage() {
                 transition={soft}
                 className="overflow-hidden"
               >
-                <Field icon={<Lock className="h-4 w-4" strokeWidth={1.6} />} delay={0.1}>
-                  <input
-                    type="password"
-                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    required
-                    minLength={8}
-                    placeholder={mode === "signup" ? "Create a strong password" : "Your password"}
+                <div className="flex flex-col gap-1.5">
+                  <PasswordField
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={inputClass}
-                    style={inputStyle}
+                    onChange={setPassword}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    minLength={mode === "signup" ? 8 : undefined}
+                    placeholder={mode === "signup" ? "Create a strong password" : "Your password"}
+                    delay={0.1}
                   />
-                </Field>
+                  {mode === "signup" && <StrengthMeter value={password} />}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -176,11 +198,20 @@ function AuthPage() {
           {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
 
           <div className="pt-1">
-            <PrimaryButton type="submit" loading={loading}>
+            <PrimaryButton
+              type="submit"
+              loading={loading}
+              disabled={
+                !email ||
+                (mode !== "reset" && !password) ||
+                (mode === "signup" && scoreStrength(password) < 2)
+              }
+            >
               {mode === "signup" ? "Create account" : mode === "reset" ? "Send reset link" : "Sign in"}
             </PrimaryButton>
           </div>
         </form>
+
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1" style={{ background: BORDER }} />
