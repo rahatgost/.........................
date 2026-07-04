@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Shield,
@@ -14,6 +14,8 @@ import {
   Check,
   ArrowRight,
   ChevronLeft,
+  Vibrate,
+  VibrateOff,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
