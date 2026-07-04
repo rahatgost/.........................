@@ -76,16 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#F8F9FB" },
+      { title: "Aegis — Security that simply works" },
+      { name: "description", content: "Aegis is a beautifully minimal authenticator that protects every account with secure one-time codes." },
+      { property: "og:title", content: "Aegis — Security that simply works" },
+      { property: "og:description", content: "A beautifully minimal authenticator for your one-time codes." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
     links: [
       {
         rel: "stylesheet",
