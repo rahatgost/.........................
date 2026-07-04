@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Shield,
@@ -14,6 +14,8 @@ import {
   Check,
   ArrowRight,
   ChevronLeft,
+  Vibrate,
+  VibrateOff,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -83,16 +85,20 @@ function TopBar({
   onBack,
   onSkip,
   canSkip,
+  hapticsOn,
+  onToggleHaptics,
 }: {
   step: number;
   total: number;
   onBack?: () => void;
   onSkip?: () => void;
   canSkip: boolean;
+  hapticsOn: boolean;
+  onToggleHaptics: () => void;
 }) {
   return (
     <header className="relative z-10 flex h-12 shrink-0 items-center justify-between px-5">
-      <div className="flex w-16 justify-start">
+      <div className="flex w-24 items-center justify-start gap-1">
         <AnimatePresence initial={false}>
           {step > 0 && (
             <motion.button
@@ -103,7 +109,7 @@ function TopBar({
               transition={spring}
               whileTap={{ scale: 0.94 }}
               onClick={onBack}
-              aria-label="Back"
+              aria-label="Go back"
               className="flex h-8 w-8 items-center justify-center rounded-full"
               style={{ color: CHARCOAL, background: "rgba(28,28,28,0.03)" }}
             >
@@ -114,7 +120,7 @@ function TopBar({
       </div>
 
       {/* Segmented progress dots with morphing active pill */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" aria-hidden>
         {Array.from({ length: total }).map((_, i) => {
           const active = i === step;
           const passed = i < step;
@@ -142,8 +148,28 @@ function TopBar({
         })}
       </div>
 
+      <div className="flex w-24 items-center justify-end gap-1">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onToggleHaptics}
+          role="switch"
+          aria-checked={hapticsOn}
+          aria-label={hapticsOn ? "Turn off vibration feedback" : "Turn on vibration feedback"}
+          title={hapticsOn ? "Vibration on" : "Vibration off"}
+          className="flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(28,28,28,0.4)]"
+          style={{
+            color: hapticsOn ? CHARCOAL : MUTED,
+            background: hapticsOn ? "rgba(28,28,28,0.06)" : "transparent",
+            border: `1px solid ${hapticsOn ? "transparent" : BORDER}`,
+          }}
+        >
+          {hapticsOn ? (
+            <Vibrate className="h-[15px] w-[15px]" strokeWidth={1.8} />
+          ) : (
+            <VibrateOff className="h-[15px] w-[15px]" strokeWidth={1.8} />
+          )}
+        </motion.button>
 
-      <div className="flex w-16 justify-end">
         {canSkip && (
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -761,10 +787,11 @@ const TOTAL = 7;
 
 /* Subtle haptics — silent no-op where unsupported (desktop, iOS Safari). */
 type HapticKind = "tick" | "soft" | "success";
-function haptic(kind: HapticKind = "tick") {
+const HAPTICS_STORAGE_KEY = "aegis.haptics";
+
+function vibratePattern(kind: HapticKind) {
   if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
-  const pattern =
-    kind === "success" ? [8, 40, 14] : kind === "soft" ? 6 : 10;
+  const pattern = kind === "success" ? [8, 40, 14] : kind === "soft" ? 6 : 10;
   try {
     navigator.vibrate(pattern);
   } catch {
@@ -772,9 +799,51 @@ function haptic(kind: HapticKind = "tick") {
   }
 }
 
+function getInitialHapticsPref(reduceMotion: boolean | null): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const stored = window.localStorage.getItem(HAPTICS_STORAGE_KEY);
+    if (stored === "on") return true;
+    if (stored === "off") return false;
+  } catch {
+    /* ignore */
+  }
+  // No stored preference: default off if the user prefers reduced motion.
+  return !reduceMotion;
+}
+
 export default function Onboarding() {
   const [[step, dir], setState] = useState<[number, number]>([0, 1]);
   const thresholdArmedRef = useRef<null | "next" | "back">(null);
+  const reduceMotion = useReducedMotion();
+
+  const [hapticsOn, setHapticsOn] = useState<boolean>(() => getInitialHapticsPref(reduceMotion));
+
+  // Persist changes.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(HAPTICS_STORAGE_KEY, hapticsOn ? "on" : "off");
+    } catch {
+      /* ignore */
+    }
+  }, [hapticsOn]);
+
+  const haptic = useCallback(
+    (kind: HapticKind = "tick") => {
+      if (!hapticsOn) return;
+      vibratePattern(kind);
+    },
+    [hapticsOn],
+  );
+
+  const toggleHaptics = () => {
+    setHapticsOn((v) => {
+      const nextOn = !v;
+      // Confirm the toggle turning on with a tiny pulse.
+      if (nextOn) vibratePattern("soft");
+      return nextOn;
+    });
+  };
 
   const goNext = () => {
     haptic("tick");
@@ -814,7 +883,16 @@ export default function Onboarding() {
         className="relative z-10 mx-auto flex h-full w-full max-w-[440px] flex-col"
         style={{ paddingTop: "max(8px, env(safe-area-inset-top))" }}
       >
-        <TopBar step={step} total={TOTAL} onBack={goBack} onSkip={goSkip} canSkip={canSkip} />
+        <TopBar
+          step={step}
+          total={TOTAL}
+          onBack={goBack}
+          onSkip={goSkip}
+          canSkip={canSkip}
+          hapticsOn={hapticsOn}
+          onToggleHaptics={toggleHaptics}
+        />
+
 
         <div className="relative flex-1 overflow-hidden" style={{ touchAction: "pan-y" }}>
           <AnimatePresence mode="wait" initial={false} custom={dir}>
