@@ -193,17 +193,23 @@ function PrimaryButton({
   children,
   onClick,
   icon,
+  loading,
+  disabled,
 }: {
   children: ReactNode;
   onClick?: () => void;
   icon?: ReactNode;
+  loading?: boolean;
+  disabled?: boolean;
 }) {
+  const isDisabled = disabled || loading;
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.985, opacity: 0.85 }}
+      disabled={isDisabled}
+      whileTap={isDisabled ? undefined : { scale: 0.985, opacity: 0.85 }}
       transition={spring}
-      className="group relative flex h-[46px] w-full items-center justify-center gap-2 rounded-[10px] text-[15px]"
+      className="group relative flex h-[46px] w-full items-center justify-center gap-2 rounded-[10px] text-[15px] disabled:opacity-60"
       style={{
         background: CHARCOAL,
         color: CREAM_SOFT,
@@ -214,18 +220,23 @@ function PrimaryButton({
       onFocus={(e) => (e.currentTarget.style.boxShadow = `${INSET_SHADOW}, ${FOCUS_SHADOW}`)}
       onBlur={(e) => (e.currentTarget.style.boxShadow = INSET_SHADOW)}
     >
-      <span className="flex items-center gap-2">
-        {children}
-        {icon ?? (
-          <ArrowRight
-            className="h-[15px] w-[15px] transition-transform duration-300 group-hover:translate-x-0.5"
-            strokeWidth={1.8}
-          />
-        )}
-      </span>
+      {loading ? (
+        <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.8} />
+      ) : (
+        <span className="flex items-center gap-2">
+          {children}
+          {icon ?? (
+            <ArrowRight
+              className="h-[15px] w-[15px] transition-transform duration-300 group-hover:translate-x-0.5"
+              strokeWidth={1.8}
+            />
+          )}
+        </span>
+      )}
     </motion.button>
   );
 }
+
 
 function GhostButton({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
   return (
