@@ -116,6 +116,26 @@ function NewAccountPage() {
 
         <SegmentedTabs tab={tab} setTab={setTab} />
 
+        <div className="flex items-center justify-between pt-3">
+          <span className="text-[11.5px]" style={{ color: MUTED }}>
+            Coming from another app?
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/vault/import" })}
+            className="rounded-full px-3 py-1.5 text-[12px] transition-colors"
+            style={{
+              background: CREAM_SOFT,
+              border: `1px solid ${BORDER}`,
+              color: CHARCOAL,
+              fontWeight: 600,
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+            }}
+          >
+            Bulk import →
+          </button>
+        </div>
+
         {notice && (
           <div className="pt-3">
             <Notice kind={notice.kind}>{notice.text}</Notice>
