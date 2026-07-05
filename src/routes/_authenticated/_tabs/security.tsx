@@ -179,6 +179,13 @@ function SecurityPage() {
             onClick={() => setChangeOpen(true)}
             chevron
           />
+          <SettingsRow
+            icon={<FileText className="h-4 w-4" strokeWidth={1.8} />}
+            title="Recovery sheet"
+            description="Printable backup — accounts list + wrapped key QR"
+            onClick={() => navigate({ to: "/vault/recovery" })}
+            chevron
+          />
         </SettingsGroup>
 
         <SectionLabel>Session</SectionLabel>
