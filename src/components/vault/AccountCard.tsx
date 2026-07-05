@@ -107,6 +107,38 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite }: Prop
           )}
         </div>
 
+        {onToggleFavorite && (
+          <motion.span
+            role="button"
+            tabIndex={0}
+            aria-label={isFavorite ? "Unpin favorite" : "Pin as favorite"}
+            aria-pressed={isFavorite}
+            whileTap={{ scale: 0.85 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(account.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFavorite(account.id);
+              }
+            }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full cursor-pointer"
+            style={{
+              color: isFavorite ? FAV : MUTED,
+              background: isFavorite ? "rgba(201,154,43,0.12)" : "transparent",
+            }}
+          >
+            <Star
+              className="h-3.5 w-3.5"
+              strokeWidth={1.9}
+              fill={isFavorite ? FAV : "none"}
+            />
+          </motion.span>
+        )}
+
         <RingTimer progress={progress} remaining={remaining} warn={warn} />
       </div>
 
