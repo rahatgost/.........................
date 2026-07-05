@@ -378,7 +378,7 @@ export function AccountCard({
               background: showLogo ? "#fff" : chipBg,
               color: chipFg,
               border: `1px solid ${BORDER}`,
-              fontFamily: "'Sora', sans-serif",
+              fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
               fontWeight: 600,
               letterSpacing: "0.02em",
             }}
@@ -614,7 +614,7 @@ export function AccountCard({
                           background: showLogo ? "#fff" : chipBg,
                           color: chipFg,
                           border: `1px solid ${BORDER}`,
-                          fontFamily: "'Sora', sans-serif",
+                          fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
                           fontWeight: 600,
                           fontSize: 13,
                         }}
@@ -1101,7 +1101,7 @@ export function AccountCard({
                             background: showLogo ? "#fff" : chipBg,
                             color: chipFg,
                             border: `1px solid ${BORDER}`,
-                            fontFamily: "'Sora', sans-serif",
+                            fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
                             fontWeight: 600,
                             fontSize: 13,
                           }}

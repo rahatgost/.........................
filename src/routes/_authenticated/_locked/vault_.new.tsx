@@ -107,7 +107,7 @@ function NewAccountPage() {
             className="text-[26px] leading-[1.1]"
             style={{
               color: CHARCOAL,
-              fontFamily: "'Sora', sans-serif",
+              fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
               fontWeight: 600,
               letterSpacing: "-0.025em",
             }}

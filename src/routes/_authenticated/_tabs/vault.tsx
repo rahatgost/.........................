@@ -946,7 +946,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           className="text-[20px]"
           style={{
             color: CHARCOAL,
-            fontFamily: "'Sora', sans-serif",
+            fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
             fontWeight: 600,
             letterSpacing: "-0.02em",
           }}

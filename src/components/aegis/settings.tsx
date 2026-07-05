@@ -23,7 +23,7 @@ export function AppBar({ title, trailing }: { title?: string; trailing?: ReactNo
     >
       <span
         className="text-[15px]"
-        style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, letterSpacing: "-0.01em" }}
+        style={{ fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif", fontWeight: 600, letterSpacing: "-0.01em" }}
       >
         {title ?? ""}
       </span>
@@ -61,7 +61,7 @@ export function LargeTitle({ title, subtitle }: { title: string; subtitle?: stri
         className="text-[28px] leading-[1.08]"
         style={{
           color: CHARCOAL,
-          fontFamily: "'Sora', sans-serif",
+          fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
           fontWeight: 600,
           letterSpacing: "-0.025em",
         }}

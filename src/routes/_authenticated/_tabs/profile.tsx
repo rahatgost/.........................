@@ -253,7 +253,7 @@ function ProfilePage() {
             style={{
               background: CHARCOAL,
               color: CREAM_SOFT,
-              fontFamily: "'Sora', sans-serif",
+              fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
               fontWeight: 600,
               letterSpacing: "0.02em",
             }}
@@ -491,7 +491,7 @@ function AvatarActionSheet({
             style={{
               background: CHARCOAL,
               color: CREAM_SOFT,
-              fontFamily: "'Sora', sans-serif",
+              fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
               fontWeight: 600,
               letterSpacing: "0.02em",
             }}

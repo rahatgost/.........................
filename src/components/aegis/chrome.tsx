@@ -113,7 +113,7 @@ export function Display({ children, delay = 0 }: { children: ReactNode; delay?: 
         color: CHARCOAL,
         fontWeight: 600,
         letterSpacing: "-0.02em",
-        fontFamily: "'Playfair Display', 'Sora', serif",
+        fontFamily: "'Playfair Display', serif",
       }}
     >
       {children}
