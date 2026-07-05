@@ -69,7 +69,75 @@ function scheduleClipboardClear(plain: string) {
   }, CLIPBOARD_CLEAR_MS);
 }
 
-interface Props {
+// Modal a11y: Escape to close, focus trap within panel, restore focus on close,
+// and lock background scroll while open.
+function useModalA11y(
+  open: boolean,
+  panelRef: React.RefObject<HTMLElement | null>,
+  onClose: () => void,
+) {
+  useEffect(() => {
+    if (!open) return;
+    if (typeof document === "undefined") return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Move focus into the panel after mount.
+    const focusFirst = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      (focusables[0] ?? panel).focus();
+    };
+    const raf = window.requestAnimationFrame(focusFirst);
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null || el === panel);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !panel.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = prevOverflow;
+      // Restore focus to the element that opened the modal.
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        previouslyFocused.focus();
+      }
+    };
+  }, [open, onClose, panelRef]);
+}
   account: DecryptedAccount;
   now: number;
   isFavorite?: boolean;
