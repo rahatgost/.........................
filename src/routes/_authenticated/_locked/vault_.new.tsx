@@ -17,6 +17,7 @@ import {
   Camera,
   ChevronDown,
   KeyRound,
+  ImageUp,
 } from "lucide-react";
 import {
   AegisScreen,
