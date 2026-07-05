@@ -420,6 +420,7 @@ function UnifiedAccountList({
   onToggleFavorite,
   onDelete,
   onTagsChanged,
+  onDetailsChanged,
   tagSuggestions,
 }: {
   favoriteList: DecryptedAccount[];
@@ -429,6 +430,7 @@ function UnifiedAccountList({
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
   onTagsChanged: (id: string, tags: string[]) => void;
+  onDetailsChanged: (id: string, patch: { issuer: string; label: string }) => void;
   tagSuggestions: string[];
 }) {
   const showBothLabels = favoriteList.length > 0 && otherList.length > 0;
@@ -472,6 +474,7 @@ function UnifiedAccountList({
                   onToggleFavorite={onToggleFavorite}
                   onDelete={onDelete}
                   onTagsChanged={onTagsChanged}
+                  onDetailsChanged={onDetailsChanged}
                   allTagSuggestions={tagSuggestions}
                 />
                 {isLastFav && showBothLabels && (
