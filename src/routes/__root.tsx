@@ -148,20 +148,25 @@ function RootComponent() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([import("@/integrations/supabase/client"), import("@/lib/vault-session")]).then(
-      ([{ supabase }, { lockVault }]) => {
-        if (!mounted) return;
-        const { data } = supabase.auth.onAuthStateChange((event) => {
-          if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-          if (event === "SIGNED_OUT") lockVault();
-          router.invalidate();
-          if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
-        });
-        // Store for cleanup
-        (window as unknown as { __aegis_auth_sub?: { unsubscribe: () => void } }).__aegis_auth_sub =
-          data.subscription;
-      },
-    );
+    Promise.all([
+      import("@/integrations/supabase/client"),
+      import("@/lib/vault-session"),
+      import("@/lib/vault-cache"),
+    ]).then(([{ supabase }, { lockVault }, { clearVaultCache }]) => {
+      if (!mounted) return;
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+        if (event === "SIGNED_OUT") {
+          lockVault();
+          void clearVaultCache();
+        }
+        router.invalidate();
+        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      });
+      // Store for cleanup
+      (window as unknown as { __aegis_auth_sub?: { unsubscribe: () => void } }).__aegis_auth_sub =
+        data.subscription;
+    });
     return () => {
       mounted = false;
       const sub = (window as unknown as { __aegis_auth_sub?: { unsubscribe: () => void } })
