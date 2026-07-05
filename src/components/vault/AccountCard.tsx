@@ -502,8 +502,8 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
               }}
             >
-              <AnimatePresence mode="wait" initial={false}>
-                {revealed ? (
+              {revealed ? (
+                <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div
                     key={`shown-${code}`}
                     initial={{ opacity: 0, y: 4 }}
@@ -521,26 +521,19 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
                   >
                     {formatCode(code)}
                   </motion.div>
-                ) : (
-                  <motion.div
-                    key="hidden"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2"
-                    style={{ color: MUTED }}
+                </AnimatePresence>
+              ) : (
+                <div className="flex items-center gap-2" style={{ color: MUTED }}>
+                  <EyeOff className="h-4 w-4" strokeWidth={1.7} />
+                  <span
+                    className="text-[22px] tabular-nums"
+                    style={{ letterSpacing: "0.32em", fontWeight: 600 }}
+                    aria-label="Code hidden"
                   >
-                    <EyeOff className="h-4 w-4" strokeWidth={1.7} />
-                    <span
-                      className="text-[22px] tabular-nums"
-                      style={{ letterSpacing: "0.32em", fontWeight: 600 }}
-                      aria-label="Code hidden"
-                    >
-                      • • •&nbsp;&nbsp;• • •
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    • • •&nbsp;&nbsp;• • •
+                  </span>
+                </div>
+              )}
               <div
                 className="flex items-center gap-1.5 text-[11px]"
                 style={{ color: warn ? DANGER : MUTED }}
