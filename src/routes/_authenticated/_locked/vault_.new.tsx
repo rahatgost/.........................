@@ -355,9 +355,14 @@ function ScanTab({
           />
         </div>
 
-        {(starting || saving) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[2px]">
+        {(starting || saving || decoding) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/35 backdrop-blur-[2px]">
             <Loader2 className="h-5 w-5 animate-spin" style={{ color: CREAM_SOFT }} />
+            {decoding && (
+              <span className="text-[11.5px]" style={{ color: CREAM_SOFT, opacity: 0.85 }}>
+                Reading image…
+              </span>
+            )}
           </div>
         )}
         {permissionDenied && (
