@@ -372,7 +372,11 @@ export function AccountCard({
 
   // Keep the modal's reveal state honest as the pref changes while closed.
   useEffect(() => {
-    if (!detailsOpen) setRevealed(!hideCodes);
+    if (!detailsOpen) {
+      setRevealed(!hideCodes);
+      setEditing(false);
+      setDetailsError(null);
+    }
   }, [hideCodes, detailsOpen]);
 
   const openDelete = () => {
