@@ -219,8 +219,14 @@ async function patchCachedTags(id: string, tags: string[]): Promise<void> {
 
 function isLikelyNetworkError(err: unknown): boolean {
   if (!err) return false;
-  const msg = err instanceof Error ? err.message : String(err);
-  return /network|fetch|failed to fetch|offline|timeout|load failed/i.test(msg);
+  let msg = "";
+  if (err instanceof Error) msg = err.message;
+  else if (typeof err === "object" && err !== null && "message" in err) {
+    msg = String((err as { message: unknown }).message ?? "");
+  } else {
+    msg = String(err);
+  }
+  return /network|fetch|failed to fetch|offline|timeout|load failed|networkerror/i.test(msg);
 }
 
 /**
