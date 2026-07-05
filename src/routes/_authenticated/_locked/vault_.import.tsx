@@ -92,6 +92,18 @@ function ImportPage() {
     );
   };
 
+  const handleScanned = (text: string) => {
+    setNotice(null);
+    try {
+      showPreview(importFromText(text));
+    } catch (err) {
+      setNotice({
+        kind: "error",
+        text: err instanceof Error ? err.message : "That QR isn't a supported OTP code.",
+      });
+    }
+  };
+
   const handlePaste = () => {
     setNotice(null);
     try {
