@@ -407,7 +407,23 @@ export function AccountCard({
                 {account.label}
               </div>
             )}
+            {account.tags && account.tags.length > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-1 overflow-hidden">
+                {account.tags.slice(0, 3).map((t) => (
+                  <TagChip key={t} tag={t} size="sm" />
+                ))}
+                {account.tags.length > 3 && (
+                  <span
+                    className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px]"
+                    style={{ color: MUTED, background: "rgba(28,28,28,0.06)", fontWeight: 600 }}
+                  >
+                    +{account.tags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
+
 
           {onToggleFavorite && (
             <motion.span
