@@ -977,6 +977,7 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
             </div>
 
             <p
+              id={confirmDescId}
               className="mb-4 text-[13px]"
               style={{ color: MUTED, lineHeight: 1.55 }}
             >
