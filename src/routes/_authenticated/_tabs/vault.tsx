@@ -195,11 +195,13 @@ function AccountGroup({
   now,
   favorites,
   onToggleFavorite,
+  onDelete,
 }: {
   items: DecryptedAccount[];
   now: number;
   favorites: Set<string>;
   onToggleFavorite: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   return (
     <div
@@ -225,6 +227,7 @@ function AccountGroup({
                 now={now}
                 isFavorite={favorites.has(a.id)}
                 onToggleFavorite={onToggleFavorite}
+                onDelete={onDelete}
               />
             </motion.div>
           ))}
