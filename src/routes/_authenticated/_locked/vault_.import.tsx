@@ -315,7 +315,7 @@ function ImportPage() {
             <input
               ref={jsonInputRef}
               type="file"
-              accept="application/json,.json,.txt"
+              accept="application/json,.json,.txt,.avf"
               className="hidden"
               onChange={handleJsonFile}
             />
