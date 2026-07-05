@@ -420,6 +420,148 @@ function ProfilePage() {
           />
         </SettingsGroup>
       </div>
+
+      <AnimatePresence>
+        {avatarSheet && (
+          <AvatarActionSheet
+            hasAvatar={hasAvatar}
+            avatarUrl={avatarUrl}
+            seed={seed}
+            onChoose={pickAvatarFile}
+            onRemove={handleAvatarRemove}
+            onClose={() => setAvatarSheet(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
+  );
+}
+
+function AvatarActionSheet({
+  hasAvatar,
+  avatarUrl,
+  seed,
+  onChoose,
+  onRemove,
+  onClose,
+}: {
+  hasAvatar: boolean;
+  avatarUrl: string | null;
+  seed: string;
+  onChoose: () => void;
+  onRemove: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.button
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0"
+        style={{ background: "rgba(28,28,28,0.35)", backdropFilter: "blur(4px)" }}
+      />
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={soft}
+        className="relative z-10 mx-auto w-full max-w-[440px] rounded-t-[22px] px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 sm:rounded-[22px]"
+        style={{
+          background: CREAM_SOFT,
+          border: `1px solid ${BORDER}`,
+          boxShadow: "0 -12px 40px -12px rgba(0,0,0,0.25)",
+        }}
+      >
+        {/* grabber */}
+        <div
+          className="mx-auto mb-4 h-1 w-10 rounded-full"
+          style={{ background: "rgba(28,28,28,0.15)" }}
+        />
+
+        <div className="flex flex-col items-center gap-3 pb-4">
+          <div
+            className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-[17px]"
+            style={{
+              background: CHARCOAL,
+              color: CREAM_SOFT,
+              fontFamily: "'Sora', sans-serif",
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {hasAvatar && avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (() => {
+                const parts = seed.trim().split(/[\s._@-]+/).filter(Boolean);
+                const chars =
+                  parts.length >= 2 ? parts[0][0] + parts[1][0] : seed.slice(0, 2);
+                return chars.toUpperCase() || "?";
+              })()
+            )}
+          </div>
+          <div
+            className="text-[15px]"
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 600,
+              color: CHARCOAL,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Profile photo
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <motion.button
+            whileTap={{ scale: 0.985 }}
+            onClick={onChoose}
+            className="flex items-center gap-3 rounded-[14px] px-4 py-3.5 text-left"
+            style={{
+              background: CHARCOAL,
+              color: CREAM_SOFT,
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+            }}
+          >
+            <Camera className="h-4 w-4" strokeWidth={1.8} />
+            <span className="text-[14px]" style={{ fontWeight: 500 }}>
+              {hasAvatar ? "Choose a new photo" : "Choose a photo"}
+            </span>
+          </motion.button>
+
+          {hasAvatar && (
+            <motion.button
+              whileTap={{ scale: 0.985 }}
+              onClick={onRemove}
+              className="flex items-center gap-3 rounded-[14px] px-4 py-3.5 text-left"
+              style={{
+                background: "transparent",
+                color: DANGER,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+              <span className="text-[14px]" style={{ fontWeight: 500 }}>
+                Remove current photo
+              </span>
+            </motion.button>
+          )}
+
+          <button
+            onClick={onClose}
+            className="mt-1 rounded-[14px] px-4 py-3 text-[13.5px]"
+            style={{ color: MUTED, fontWeight: 500 }}
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
