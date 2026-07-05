@@ -476,18 +476,87 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
                   role="button"
                   tabIndex={0}
                   aria-label={isFavorite ? "Unpin favorite" : "Pin as favorite"}
-                  whileTap={{ scale: 0.85 }}
+                  whileTap={{ scale: 0.82 }}
+                  whileHover={{ scale: 1.08 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleFavorite(account.id);
                   }}
-                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full"
-                  style={{
-                    color: isFavorite ? FAV : MUTED,
-                    background: isFavorite ? "rgba(201,154,43,0.12)" : "transparent",
+                  className="relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full"
+                  animate={{
+                    background: isFavorite ? "rgba(201,154,43,0.14)" : "rgba(201,154,43,0)",
                   }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <Star className="h-4 w-4" strokeWidth={1.9} fill={isFavorite ? FAV : "none"} />
+                  {/* Radiant glow when active */}
+                  <AnimatePresence>
+                    {isFavorite && (
+                      <motion.span
+                        aria-hidden
+                        className="absolute inset-0 rounded-full"
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.6 }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{
+                          background:
+                            "radial-gradient(circle, rgba(201,154,43,0.35), transparent 65%)",
+                          filter: "blur(4px)",
+                        }}
+                      />
+                    )}
+                  </AnimatePresence>
+
+                  {/* Burst ring on activation */}
+                  <AnimatePresence>
+                    {isFavorite && (
+                      <motion.span
+                        key="burst"
+                        aria-hidden
+                        className="absolute inset-0 rounded-full"
+                        initial={{ opacity: 0.7, scale: 0.5 }}
+                        animate={{ opacity: 0, scale: 1.9 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ border: `1.5px solid ${FAV}` }}
+                      />
+                    )}
+                  </AnimatePresence>
+
+                  {/* Sparkle particles */}
+                  <AnimatePresence>
+                    {isFavorite &&
+                      [0, 60, 120, 180, 240, 300].map((deg) => (
+                        <motion.span
+                          key={`spark-${deg}`}
+                          aria-hidden
+                          className="pointer-events-none absolute left-1/2 top-1/2 h-0.5 w-0.5 rounded-full"
+                          style={{ background: FAV }}
+                          initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                          animate={{
+                            x: Math.cos((deg * Math.PI) / 180) * 16,
+                            y: Math.sin((deg * Math.PI) / 180) * 16,
+                            opacity: [0, 1, 0],
+                            scale: [0, 1.4, 0.6],
+                          }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                        />
+                      ))}
+                  </AnimatePresence>
+
+                  <motion.span
+                    className="relative flex items-center justify-center"
+                    animate={
+                      isFavorite
+                        ? { scale: [1, 1.35, 0.92, 1.08, 1], rotate: [0, -12, 8, -4, 0] }
+                        : { scale: 1, rotate: 0 }
+                    }
+                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ color: isFavorite ? FAV : MUTED }}
+                  >
+                    <Star className="h-4 w-4" strokeWidth={1.9} fill={isFavorite ? FAV : "none"} />
+                  </motion.span>
                 </motion.span>
               )}
               <RingTimer progress={progress} remaining={remaining} warn={warn} />
@@ -577,13 +646,6 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div
-                className="flex items-center gap-1.5 text-[11px]"
-                style={{ color: warn ? DANGER : MUTED }}
-              >
-                <Clock3 className="h-3 w-3" strokeWidth={1.8} />
-                <span>Refreshes in {remaining}s</span>
-              </div>
             </motion.div>
 
             {/* Copy primary */}
