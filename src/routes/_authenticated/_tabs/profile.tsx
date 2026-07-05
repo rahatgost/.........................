@@ -261,11 +261,11 @@ function ProfilePage() {
         >
           <motion.button
             type="button"
-            onClick={handleAvatarPick}
+            onClick={openAvatarSheet}
             whileTap={{ scale: 0.96 }}
             disabled={avatarBusy}
             aria-label={hasAvatar ? "Change profile photo" : "Add profile photo"}
-            className="group relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-[16px]"
+            className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[16px]"
             style={{
               background: CHARCOAL,
               color: CREAM_SOFT,
@@ -274,27 +274,33 @@ function ProfilePage() {
               letterSpacing: "0.02em",
             }}
           >
-            {hasAvatar && avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=""
-                className="h-full w-full object-cover"
-                draggable={false}
-              />
-            ) : (
-              initials(seed)
-            )}
+            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+              {hasAvatar && avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                initials(seed)
+              )}
+            </span>
+            {/* Tactile "editable" badge — always visible on mobile so the
+                affordance is obvious without hover. */}
             <span
-              className={
-                "absolute inset-0 flex items-center justify-center transition-opacity " +
-                (avatarBusy ? "opacity-100" : "opacity-0 group-hover:opacity-100")
-              }
-              style={{ background: "rgba(28,28,28,0.55)" }}
+              className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full"
+              style={{
+                background: CREAM_SOFT,
+                border: `1px solid ${BORDER}`,
+                color: CHARCOAL,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+              }}
             >
               {avatarBusy ? (
-                <Loader2 className="h-4 w-4 animate-spin" style={{ color: CREAM_SOFT }} />
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <Camera className="h-4 w-4" strokeWidth={1.8} style={{ color: CREAM_SOFT }} />
+                <Pencil className="h-3 w-3" strokeWidth={2} />
               )}
             </span>
           </motion.button>
