@@ -334,7 +334,14 @@ function ProfilePage() {
               {displayShown}
             </div>
             <div className="truncate text-[12.5px]" style={{ color: MUTED }}>
-              {user.email}
+              {avatarBusy ? (
+                <span className="inline-flex items-center gap-1.5" style={{ color: CHARCOAL }}>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Uploading photo…
+                </span>
+              ) : (
+                user.email
+              )}
             </div>
           </div>
         </motion.div>
