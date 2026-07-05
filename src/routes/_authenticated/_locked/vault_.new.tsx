@@ -141,11 +141,27 @@ function NewAccountPage() {
           </button>
         </div>
 
+        {!online && (
+          <div
+            className="mt-3 flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px]"
+            style={{
+              background: CREAM_SOFT,
+              border: `1px solid ${BORDER}`,
+              color: MUTED,
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+            }}
+          >
+            <WifiOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+            <span>You're offline — adding an account is disabled until you reconnect.</span>
+          </div>
+        )}
+
         {notice && (
           <div className="pt-3">
             <Notice kind={notice.kind}>{notice.text}</Notice>
           </div>
         )}
+
 
         <div className="pt-4">
           <AnimatePresence mode="wait" initial={false}>
