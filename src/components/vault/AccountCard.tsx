@@ -577,13 +577,6 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div
-                className="flex items-center gap-1.5 text-[11px]"
-                style={{ color: warn ? DANGER : MUTED }}
-              >
-                <Clock3 className="h-3 w-3" strokeWidth={1.8} />
-                <span>Refreshes in {remaining}s</span>
-              </div>
             </motion.div>
 
             {/* Copy primary */}
