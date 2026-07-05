@@ -1,20 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Star, Trash2, Loader2 } from "lucide-react";
+import { Copy, Check, Star, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { generateCode, type DecryptedAccount } from "@/lib/vault-accounts";
-import { BORDER, CHARCOAL, CREAM_SOFT, MUTED } from "@/components/aegis/chrome";
+import { BORDER, CHARCOAL, CREAM_SOFT, MUTED, soft } from "@/components/aegis/chrome";
 import { logoUrlFor, domainFromIssuer } from "@/lib/issuer-domain";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const DANGER = "#b23a2a";
 const FAV = "#c99a2b";
@@ -302,38 +292,145 @@ export function AccountCard({ account, now, isFavorite, onToggleFavorite, onDele
         </AnimatePresence>
       </div>
     </motion.button>
-    <AlertDialog open={confirmOpen} onOpenChange={(o) => (deleting ? null : setConfirmOpen(o))}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Remove {account.issuer || "this account"}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The encrypted secret will be deleted from your vault. You'll need
-            the original QR or setup key to add it back. This can't be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              confirmDelete();
+    <AnimatePresence>
+      {confirmOpen && (
+        <motion.div
+          key="delete-sheet"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.button
+            aria-label="Close"
+            onClick={() => !deleting && setConfirmOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0"
+            style={{ background: "rgba(28,28,28,0.35)", backdropFilter: "blur(4px)" }}
+          />
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={soft}
+            className="relative z-10 mx-auto w-full max-w-[440px] rounded-t-[22px] px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 sm:rounded-[22px]"
+            style={{
+              background: CREAM_SOFT,
+              border: `1px solid ${BORDER}`,
+              boxShadow: "0 -12px 40px -12px rgba(0,0,0,0.25)",
             }}
-            disabled={deleting}
-            style={{ background: DANGER, color: "#fff" }}
           >
-            {deleting ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Removing…
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <Trash2 className="h-3.5 w-3.5" /> Remove
-              </span>
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            <div
+              aria-hidden
+              className="mx-auto mb-3 h-[4px] w-10 rounded-full"
+              style={{ background: "rgba(28,28,28,0.15)" }}
+            />
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[13px]"
+                  style={{
+                    background: showLogo ? "#fff" : chipBg,
+                    color: chipFg,
+                    border: `1px solid ${BORDER}`,
+                    fontFamily: "'Sora', sans-serif",
+                    fontWeight: 600,
+                    fontSize: 13,
+                  }}
+                >
+                  {showLogo ? (
+                    <img src={logoUrl!} alt="" className="h-full w-full object-contain" />
+                  ) : (
+                    initials(seed)
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div
+                    className="truncate text-[16px]"
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontWeight: 600,
+                      letterSpacing: "-0.01em",
+                      color: CHARCOAL,
+                    }}
+                  >
+                    Remove {account.issuer || "this account"}?
+                  </div>
+                  {account.label && (
+                    <div className="mt-0.5 truncate text-[12px]" style={{ color: MUTED }}>
+                      {account.label}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => !deleting && setConfirmOpen(false)}
+                disabled={deleting}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "rgba(28,28,28,0.06)", color: CHARCOAL }}
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" strokeWidth={1.8} />
+              </motion.button>
+            </div>
+
+            <p
+              className="mb-4 text-[13px]"
+              style={{ color: MUTED, lineHeight: 1.55 }}
+            >
+              The encrypted secret will be deleted from your vault. You'll
+              need the original QR or setup key to add it back. This can't
+              be undone.
+            </p>
+
+            <div className="flex flex-col gap-2 pb-1">
+              <motion.button
+                whileTap={{ scale: 0.99 }}
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex items-center justify-center gap-2 rounded-[14px] px-4 py-3.5 text-[14px]"
+                style={{
+                  background: DANGER,
+                  color: "#fff",
+                  fontWeight: 600,
+                  letterSpacing: "-0.005em",
+                  opacity: deleting ? 0.75 : 1,
+                }}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Removing…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" strokeWidth={1.9} />
+                    Remove account
+                  </>
+                )}
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.99 }}
+                onClick={() => !deleting && setConfirmOpen(false)}
+                disabled={deleting}
+                className="rounded-[14px] px-4 py-3.5 text-[14px]"
+                style={{
+                  background: "rgba(28,28,28,0.03)",
+                  color: CHARCOAL,
+                  border: `1px solid ${BORDER}`,
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </>
   );
 }
