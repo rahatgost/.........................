@@ -9,11 +9,16 @@ import {
 } from "@/lib/vault-session";
 import {
   deleteAccount,
+  flushPendingTagUpdates,
   listAccountsWithCache,
   setAccountFavorite,
   setAccountTags,
   type DecryptedAccount,
 } from "@/lib/vault-accounts";
+import {
+  hasQueuedTagUpdates,
+  listQueuedTagUpdates,
+} from "@/lib/vault-tag-queue";
 import { useOnlineStatus } from "@/lib/use-online";
 import { AccountCard } from "@/components/vault/AccountCard";
 import { TagChip } from "@/components/vault/tags";
@@ -60,7 +65,15 @@ function VaultPage() {
   const [retrying, setRetrying] = useState(false);
   const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [pendingTagCount, setPendingTagCount] = useState<number>(
+    () => (typeof window === "undefined" ? 0 : listQueuedTagUpdates().length),
+  );
+  const [syncingTags, setSyncingTags] = useState(false);
   const online = useOnlineStatus();
+
+  const refreshPendingCount = useCallback(() => {
+    setPendingTagCount(listQueuedTagUpdates().length);
+  }, []);
 
   const allTags = useMemo(() => {
     if (!accounts) return [] as { tag: string; count: number }[];
@@ -88,6 +101,7 @@ function VaultPage() {
       // Drop filters that no longer match any account after the edit.
       return prev;
     });
+    setPendingTagCount(listQueuedTagUpdates().length);
   }, []);
 
 
@@ -150,6 +164,45 @@ function VaultPage() {
     setRetrying(true);
     setReloadKey((k) => k + 1);
   }, []);
+
+  const syncPendingTags = useCallback(async () => {
+    if (syncingTags) return;
+    setSyncingTags(true);
+    try {
+      const n = await flushPendingTagUpdates();
+      refreshPendingCount();
+      if (n > 0) {
+        toast.success(`Synced ${n} tag update${n === 1 ? "" : "s"}`);
+        setReloadKey((k) => k + 1);
+      } else if (hasQueuedTagUpdates()) {
+        toast.error("Some tag updates still can't reach the server.");
+      }
+    } finally {
+      setSyncingTags(false);
+    }
+  }, [refreshPendingCount, syncingTags]);
+
+  // Auto-flush whenever the browser reports we're back online, and when the
+  // component mounts online with pending updates.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flush = () => {
+      if (!navigator.onLine) return;
+      if (!hasQueuedTagUpdates()) return;
+      void syncPendingTags();
+    };
+    window.addEventListener("online", flush);
+    // Fire once at mount too — the app may open online with a queue left
+    // from a previous session.
+    flush();
+    return () => window.removeEventListener("online", flush);
+  }, [syncPendingTags]);
+
+  // Keep the pending count fresh whenever the queue may have changed.
+  useEffect(() => {
+    refreshPendingCount();
+  }, [refreshPendingCount, accounts, online, reloadKey]);
+
 
 
   const filtered = useMemo(() => {
@@ -229,6 +282,50 @@ function VaultPage() {
           </button>
         </div>
       )}
+
+      {pendingTagCount > 0 && (
+        <div
+          className="mb-2 mt-1 flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px]"
+          style={{
+            background: CREAM_SOFT,
+            border: `1px solid ${BORDER}`,
+            color: CHARCOAL,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <Tags className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+          <span className="flex-1 truncate">
+            {online
+              ? `${pendingTagCount} tag update${pendingTagCount === 1 ? "" : "s"} waiting to sync.`
+              : `${pendingTagCount} tag update${pendingTagCount === 1 ? "" : "s"} saved locally — will sync when online.`}
+          </span>
+          {online && (
+            <button
+              type="button"
+              onClick={syncPendingTags}
+              disabled={syncingTags}
+              className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] transition-colors disabled:opacity-60"
+              style={{
+                background: "rgba(28,28,28,0.06)",
+                color: CHARCOAL,
+                fontWeight: 600,
+              }}
+              aria-label="Retry syncing tag updates"
+            >
+              {syncingTags ? (
+                <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2} />
+              ) : (
+                <RefreshCw className="h-3 w-3" strokeWidth={2} />
+              )}
+              Sync now
+            </button>
+          )}
+        </div>
+      )}
+
+
 
 
       {accounts && accounts.length > 0 && <SearchField value={query} onChange={setQuery} />}
@@ -469,23 +566,30 @@ function TagManagerSheet({
 
   const applyTransform = async (transform: (tags: string[]) => string[]) => {
     const next = [...accounts];
+    let anyQueued = false;
     for (let i = 0; i < next.length; i++) {
       const current = next[i].tags ?? [];
       const proposed = transform(current);
       const same =
         current.length === proposed.length && current.every((t, idx) => t === proposed[idx]);
       if (same) continue;
-      const saved = await setAccountTags(next[i].id, proposed);
+      const { tags: saved, queued } = await setAccountTags(next[i].id, proposed);
+      if (queued) anyQueued = true;
       next[i] = { ...next[i], tags: saved };
     }
     onLocalChange(next);
+    return { anyQueued };
   };
 
   const doDelete = async (tag: string) => {
     setBusyTag(tag);
     try {
-      await applyTransform((tags) => tags.filter((t) => t !== tag));
-      toast.success(`Removed tag "${tag}"`);
+      const { anyQueued } = await applyTransform((tags) => tags.filter((t) => t !== tag));
+      toast.success(
+        anyQueued
+          ? `Removed "${tag}" locally — will sync when online`
+          : `Removed tag "${tag}"`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not remove tag.");
     } finally {
@@ -501,10 +605,14 @@ function TagManagerSheet({
     }
     setBusyTag(tag);
     try {
-      await applyTransform((tags) =>
+      const { anyQueued } = await applyTransform((tags) =>
         tags.includes(tag) ? [...tags.filter((t) => t !== tag), target] : tags,
       );
-      toast.success(`Renamed "${tag}" → "${target}"`);
+      toast.success(
+        anyQueued
+          ? `Renamed "${tag}" → "${target}" locally — will sync when online`
+          : `Renamed "${tag}" → "${target}"`,
+      );
       setRenameFor(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not rename tag.");

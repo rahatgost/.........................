@@ -13,6 +13,11 @@ import {
   writeVaultCache,
 } from "@/lib/vault-cache";
 import { normalizeTagList } from "@/components/vault/tags";
+import {
+  dequeueTagUpdate,
+  enqueueTagUpdate,
+  flushQueuedTagUpdates,
+} from "@/lib/vault-tag-queue";
 
 const ACCOUNT_SELECT =
   "id, issuer, label, icon_slug, algorithm, digits, period, sort_order, is_favorite, tags, secret_ciphertext, secret_iv";
@@ -152,18 +157,95 @@ export async function setAccountFavorite(id: string, isFavorite: boolean): Promi
   if (data) void upsertVaultCache(data as VaultAccountRecord);
 }
 
-/** Overwrite an account's tag list. Client normalises + caps at 20. */
-export async function setAccountTags(id: string, tags: string[]): Promise<string[]> {
+/**
+ * Overwrite an account's tag list. Client normalises + caps at 20.
+ *
+ * When we're offline (or the network write fails), the change is queued
+ * to localStorage and the vault cache is patched optimistically so the
+ * UI stays in sync. The caller receives `{ tags, queued: true }` and can
+ * surface a "will sync when online" hint instead of a hard error.
+ */
+export async function setAccountTags(
+  id: string,
+  tags: string[],
+): Promise<{ tags: string[]; queued: boolean }> {
   const normalized = normalizeTagList(tags);
-  const { data, error } = await supabase
-    .from("vault_accounts")
-    .update({ tags: normalized })
-    .eq("id", id)
-    .select(ACCOUNT_SELECT)
-    .single();
-  if (error) throw error;
-  if (data) void upsertVaultCache(data as VaultAccountRecord);
-  return normalized;
+  const attempt = async () => {
+    const { data, error } = await supabase
+      .from("vault_accounts")
+      .update({ tags: normalized })
+      .eq("id", id)
+      .select(ACCOUNT_SELECT)
+      .single();
+    if (error) throw error;
+    if (data) void upsertVaultCache(data as VaultAccountRecord);
+  };
+
+  if (isOffline()) {
+    enqueueTagUpdate(id, normalized);
+    await patchCachedTags(id, normalized);
+    return { tags: normalized, queued: true };
+  }
+
+  try {
+    await attempt();
+    dequeueTagUpdate(id);
+    return { tags: normalized, queued: false };
+  } catch (err) {
+    if (isLikelyNetworkError(err)) {
+      enqueueTagUpdate(id, normalized);
+      await patchCachedTags(id, normalized);
+      return { tags: normalized, queued: true };
+    }
+    throw err;
+  }
+}
+
+/** Best-effort patch of the offline cache without a fresh server row. */
+async function patchCachedTags(id: string, tags: string[]): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const rows = await readVaultCache(user.id);
+    const row = rows?.find((r) => r.id === id);
+    if (!row) return;
+    await upsertVaultCache({ ...row, tags });
+  } catch {
+    // Cache is best-effort.
+  }
+}
+
+function isLikelyNetworkError(err: unknown): boolean {
+  if (!err) return false;
+  let msg = "";
+  if (err instanceof Error) msg = err.message;
+  else if (typeof err === "object" && err !== null && "message" in err) {
+    msg = String((err as { message: unknown }).message ?? "");
+  } else {
+    msg = String(err);
+  }
+  return /network|fetch|failed to fetch|offline|timeout|load failed|networkerror/i.test(msg);
+}
+
+/**
+ * Flush any tag updates queued while offline. Returns the count of rows
+ * that reached the server. Safe to call repeatedly.
+ */
+export async function flushPendingTagUpdates(): Promise<number> {
+  if (isOffline()) return 0;
+  const synced = await flushQueuedTagUpdates(async (id, tags) => {
+    const { data, error } = await supabase
+      .from("vault_accounts")
+      .update({ tags: normalizeTagList(tags) })
+      .eq("id", id)
+      .select(ACCOUNT_SELECT)
+      .single();
+    if (error) throw error;
+    if (data) void upsertVaultCache(data as VaultAccountRecord);
+  });
+  return synced.length;
 }
 
 async function decryptRows(
@@ -217,6 +299,9 @@ export async function listAccountsWithCache(
   const online = !isOffline();
   if (online) {
     try {
+      // Flush any tag edits queued while offline BEFORE reading, so the
+      // fetched rows already reflect them.
+      await flushPendingTagUpdates().catch(() => 0);
       const { data, error } = await supabase
         .from("vault_accounts")
         .select(ACCOUNT_SELECT)
