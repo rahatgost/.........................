@@ -13,7 +13,9 @@ import {
   X,
   FileText,
   EyeOff,
+  Fingerprint,
 } from "lucide-react";
+
 import { Switch } from "@/components/ui/switch";
 import { setHideCodes, useHideCodes } from "@/lib/vault-privacy";
 import {
@@ -39,6 +41,7 @@ import {
 import {
   AUTO_LOCK_OPTIONS,
   getAutoLockMs,
+  getVaultKey,
   isVaultUnlocked,
   lockVault,
   setAutoLockMs,
@@ -52,6 +55,13 @@ import {
   toByteaHex,
   unwrapVaultKey,
 } from "@/lib/vault-crypto";
+import {
+  disableBiometric,
+  enrollBiometric,
+  isBiometricEnabled,
+  isBiometricSupported,
+} from "@/lib/biometric";
+
 
 export const Route = createFileRoute("/_authenticated/_tabs/security")({
   beforeLoad: ({ location }) => {
@@ -81,6 +91,9 @@ function SecurityPage() {
   const [busy, setBusy] = useState(false);
   const [autoLockOpen, setAutoLockOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [bioSupported, setBioSupported] = useState(false);
+  const [bioEnrolled, setBioEnrolled] = useState<boolean>(() => isBiometricEnabled(user.id));
+  const [bioBusy, setBioBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,10 +105,39 @@ function SecurityPage() {
       .then(({ data }) => {
         if (!cancelled) setHint(data?.passphrase_hint ?? null);
       });
+    void isBiometricSupported().then((ok) => {
+      if (!cancelled) setBioSupported(ok);
+    });
     return () => {
       cancelled = true;
     };
   }, [user.id]);
+
+  const toggleBiometric = async (next: boolean) => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    setNotice(null);
+    try {
+      if (next) {
+        const dek = getVaultKey();
+        if (!dek) throw new Error("Vault is locked. Unlock first to enable biometrics.");
+        await enrollBiometric({ userId: user.id, userEmail: user.email ?? user.id, dek });
+        setBioEnrolled(true);
+        setNotice({ kind: "info", text: "Biometric unlock enabled on this device." });
+      } else {
+        disableBiometric(user.id);
+        setBioEnrolled(false);
+        setNotice({ kind: "info", text: "Biometric unlock disabled on this device." });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not update biometric setting.";
+      setNotice({ kind: "error", text: msg });
+      setBioEnrolled(isBiometricEnabled(user.id));
+    } finally {
+      setBioBusy(false);
+    }
+  };
+
 
   const lockNow = () => {
     lockVault();
@@ -191,6 +233,36 @@ function SecurityPage() {
             chevron
           />
         </SettingsGroup>
+
+        <SectionLabel>Sign-in</SectionLabel>
+        <SettingsGroup>
+          <SettingsRow
+            icon={<Fingerprint className="h-4 w-4" strokeWidth={1.8} />}
+            title="Biometric unlock"
+            description={
+              !bioSupported
+                ? "Not available on this device or browser."
+                : bioEnrolled
+                  ? "Use Face ID, Touch ID, or Windows Hello to unlock."
+                  : "Skip typing your passphrase on trusted devices."
+            }
+            onClick={
+              bioSupported && !bioBusy ? () => void toggleBiometric(!bioEnrolled) : undefined
+            }
+            disabled={!bioSupported || bioBusy}
+            trailing={
+              <Switch
+                checked={bioEnrolled}
+                disabled={!bioSupported || bioBusy}
+                onCheckedChange={(v) => void toggleBiometric(v)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Biometric unlock"
+              />
+            }
+          />
+        </SettingsGroup>
+
+
 
         <SectionLabel>Privacy</SectionLabel>
         <SettingsGroup>
