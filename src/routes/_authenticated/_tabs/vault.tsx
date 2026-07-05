@@ -9,12 +9,12 @@ import {
 } from "@/lib/vault-session";
 import {
   deleteAccount,
-  listAccounts,
+  listAccountsWithCache,
   setAccountFavorite,
   type DecryptedAccount,
 } from "@/lib/vault-accounts";
 import { AccountCard } from "@/components/vault/AccountCard";
-import { Shield, Plus, Loader2, Search, X } from "lucide-react";
+import { Shield, Plus, Loader2, Search, X, WifiOff } from "lucide-react";
 import {
   BORDER,
   CHARCOAL,
