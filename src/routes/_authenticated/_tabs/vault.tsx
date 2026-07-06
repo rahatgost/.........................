@@ -915,6 +915,11 @@ function UnifiedAccountList({
   selectedIds: Set<string>;
   onSelectToggle: (id: string) => void;
 }) {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string) => {
+    const msg = i18n._(id);
+    return msg === id ? fallback : msg;
+  };
   const showBothLabels = favoriteList.length > 0 && otherList.length > 0;
 
   // Long-press activation keeps normal tap-to-copy working: a real drag
