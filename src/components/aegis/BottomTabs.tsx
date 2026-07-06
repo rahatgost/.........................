@@ -1,21 +1,23 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { KeyRound, ShieldCheck, Plus, User, type LucideIcon } from "lucide-react";
+import { useLingui } from "@lingui/react";
 import { BORDER, CHARCOAL, CREAM_SOFT, INSET_SHADOW, MUTED, soft } from "./chrome";
 
 interface Tab {
   id: string;
-  label: string;
+  labelId: string;
+  labelFallback: string;
   icon: LucideIcon;
   to: string;
   emphasized?: boolean;
 }
 
 const TABS: Tab[] = [
-  { id: "vault", label: "Vault", icon: KeyRound, to: "/vault" },
-  { id: "security", label: "Security", icon: ShieldCheck, to: "/security" },
-  { id: "add", label: "Add", icon: Plus, to: "/vault/new", emphasized: true },
-  { id: "profile", label: "Profile", icon: User, to: "/profile" },
+  { id: "vault", labelId: "tabs.vault", labelFallback: "Vault", icon: KeyRound, to: "/vault" },
+  { id: "security", labelId: "tabs.security", labelFallback: "Security", icon: ShieldCheck, to: "/security" },
+  { id: "add", labelId: "tabs.add", labelFallback: "Add", icon: Plus, to: "/vault/new", emphasized: true },
+  { id: "profile", labelId: "tabs.profile", labelFallback: "Profile", icon: User, to: "/profile" },
 ];
 
 function isActive(pathname: string, to: string) {
