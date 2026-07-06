@@ -160,8 +160,10 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         {/* Applied pre-hydration so first paint matches the user's saved
-            theme — prevents a light-mode flash before React mounts. */}
+            theme + locale — prevents a light-mode flash and mismatched
+            <html lang> before React mounts. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
