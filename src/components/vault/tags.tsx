@@ -5,7 +5,7 @@
 
 import { type KeyboardEvent } from "react";
 import { X, Check } from "lucide-react";
-import { BORDER, CHARCOAL, MUTED } from "@/components/aegis/chrome";
+import { BORDER, CHARCOAL, CREAM_SOFT, MUTED } from "@/components/aegis/chrome";
 
 export const MAX_TAGS_PER_ACCOUNT = 20;
 export const MAX_TAG_LENGTH = 24;
@@ -230,8 +230,8 @@ export function TagInput({ value, onChange, extras }: TagInputProps) {
               onKeyDown={(e) => handleKey(e, tag)}
               className="inline-flex shrink-0 snap-start items-center gap-1 rounded-full px-3 py-1.5 text-[12px] transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
               style={{
-                background: isSelected ? CHARCOAL : "#fff",
-                color: isSelected ? "#fff" : CHARCOAL,
+                background: isSelected ? CHARCOAL : CREAM_SOFT,
+                color: isSelected ? CREAM_SOFT : CHARCOAL,
                 border: `1px ${isExtra ? "dashed" : "solid"} ${
                   isSelected ? CHARCOAL : BORDER
                 }`,

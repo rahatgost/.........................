@@ -316,7 +316,7 @@ function SegButton({
           layoutId="add-tab-pill"
           className="absolute inset-0 rounded-full"
           style={{
-            background: "#ffffff",
+            background: CREAM_SOFT,
             border: `1px solid ${BORDER}`,
             boxShadow: "0 1px 2px rgb(var(--aegis-ink-rgb) / 0.06), 0 4px 12px -6px rgb(var(--aegis-ink-rgb) / 0.12)",
           }}
@@ -570,7 +570,7 @@ function TypePicker({
             onClick={() => onChange(o.id)}
             className="relative flex flex-col items-center rounded-[10px] px-2 py-2 text-[11.5px] transition-colors"
             style={{
-              background: active ? "#ffffff" : "transparent",
+              background: active ? "var(--aegis-cream-soft)" : "transparent",
               border: active ? `1px solid ${BORDER}` : "1px solid transparent",
               color: active ? CHARCOAL : MUTED,
               fontWeight: active ? 600 : 500,
