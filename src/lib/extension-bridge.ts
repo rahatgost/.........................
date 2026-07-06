@@ -35,14 +35,18 @@ export function isExtensionInstalled(): boolean {
 }
 
 type SendResult =
-  | { ok: true; accountCount: number }
+  | { ok: true; accountCount: number; syncSeq: number }
+  | { ok: false; reason: "no_extension" | "no_id" | "send_failed"; detail?: string };
+
+export type ExtensionState =
+  | { ok: true; unlocked: boolean; accountCount: number; expiresAt: number; syncSeq: number; syncedAt: number; userId: string }
   | { ok: false; reason: "no_extension" | "no_id" | "send_failed"; detail?: string };
 
 interface ChromeRuntimeLike {
   sendMessage: (
     id: string,
     msg: unknown,
-    cb: (res: { ok?: boolean; accountCount?: number; error?: string } | undefined) => void,
+    cb: (res: Record<string, unknown> | undefined) => void,
   ) => void;
   lastError?: { message?: string };
 }
@@ -65,6 +69,19 @@ function stripToExtShape(a: DecryptedAccount) {
     otp_type: a.otp_type,
   };
 }
+
+/**
+ * Module-local monotonic sync counter. Bumped on every successful
+ * `syncVaultToExtension` so the heartbeat can detect that the extension
+ * is running with a stale vault (SW restart, TTL expiry, another tab
+ * pushed a newer copy).
+ */
+let LOCAL_SYNC_SEQ = 0;
+
+export function getLocalSyncSeq(): number {
+  return LOCAL_SYNC_SEQ;
+}
+
 
 export async function syncVaultToExtension(params: {
   userId: string;
