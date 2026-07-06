@@ -210,23 +210,11 @@ function NewAccountPage() {
             >
               {tab === "scan" ? (
                 <ScanTab
-                  onDetected={(uri) => {
-                    try {
-                      const parsed = parseOtpauthUri(uri);
-                      save(parsed);
-                    } catch (err) {
-                      setNotice({
-                        kind: "error",
-                        text:
-                          err instanceof Error
-                            ? err.message
-                            : "That QR isn't a valid otpauth code.",
-                      });
-                    }
-                  }}
-                  onError={(msg) => setNotice({ kind: "error", text: msg })}
+                  key={scanAttempt}
+                  onDetected={handleQrDetected}
+                  onError={handleScanError}
                   saving={saving}
-                  switchToManual={() => setTab("manual")}
+                  switchToManual={switchToManual}
                 />
               ) : (
                 <ManualTab onSubmit={save} saving={saving} />
