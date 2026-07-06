@@ -34,7 +34,7 @@ import {
 } from "@/components/aegis/chrome";
 import { LargeTitle, SectionLabel, SettingsGroup, SettingsRow } from "@/components/aegis/settings";
 import { useLingui } from "@lingui/react";
-import { PasswordField, StrengthMeter, scoreStrength } from "@/components/aegis/password-field";
+import { PasswordField, StrengthMeter, ZxcvbnMeter, scoreStrength } from "@/components/aegis/password-field";
 import {
   AUTO_LOCK_OPTIONS,
   getAutoLockMs,
@@ -417,13 +417,16 @@ function ChangePassphraseSheet({
   const [hint, setHint] = useState(initialHint ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // zxcvbn score for the new passphrase; refuse anything under 3 (Strong).
+  const [zScore, setZScore] = useState<0 | 1 | 2 | 3 | 4>(0);
 
   const canSubmit =
     current.length > 0 &&
     next.length >= 10 &&
-    scoreStrength(next) >= 2 &&
+    zScore >= 3 &&
     next === confirm &&
     next !== current;
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -554,7 +557,7 @@ function ChangePassphraseSheet({
             placeholder="New passphrase"
             delay={0.05}
           />
-          <StrengthMeter value={next} />
+          <ZxcvbnMeter value={next} onScore={setZScore} minScore={3} />
           <PasswordField
             value={confirm}
             onChange={setConfirm}
