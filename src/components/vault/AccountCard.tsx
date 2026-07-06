@@ -1483,23 +1483,15 @@ export function AccountCard({
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div
-                            id={confirmTitleId}
-                            className="truncate text-[16px]"
-                            style={{
-                              fontFamily: "'Playfair Display', serif",
-                              fontWeight: 600,
-                              letterSpacing: "-0.01em",
-                              color: CHARCOAL,
-                            }}
-                          >
+                          <div id={confirmTitleId} className="truncate" style={typeSheetTitleSm}>
                             Remove {account.issuer || "this account"}?
                           </div>
                           {account.label && (
-                            <div className="mt-0.5 truncate text-[12px]" style={{ color: MUTED }}>
+                            <div className="mt-0.5 truncate" style={{ ...typeSubLabel, fontSize: 12 }}>
                               {account.label}
                             </div>
                           )}
+
                         </div>
                       </div>
                       <motion.button
@@ -1516,12 +1508,13 @@ export function AccountCard({
 
                     <p
                       id={confirmDescId}
-                      className="mb-4 text-[13px]"
-                      style={{ color: MUTED, lineHeight: 1.55 }}
+                      className="mb-4"
+                      style={{ ...typeBody, fontSize: 13 }}
                     >
                       The encrypted secret will be deleted from your vault. You'll need the original
                       QR or setup key to add it back. This can't be undone.
                     </p>
+
 
                     <div className="flex flex-col gap-2 pb-1">
                       <motion.button
