@@ -101,6 +101,12 @@ function VaultPage() {
   const [retrying, setRetrying] = useState(false);
   const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  // Phase 7.3 — bulk selection mode.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [bulkExportOpen, setBulkExportOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [pendingTagCount, setPendingTagCount] = useState<number>(
     () => (typeof window === "undefined" ? 0 : listQueuedTagUpdates().length),
   );
