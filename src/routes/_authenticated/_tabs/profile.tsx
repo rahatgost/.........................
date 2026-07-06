@@ -452,7 +452,7 @@ function ProfilePage() {
           )}
           <SettingsRow
             icon={<Mail className="h-4 w-4" strokeWidth={1.8} />}
-            title="Email"
+            title={t("profile.email", "Email")}
             value={user.email ?? ""}
           />
         </SettingsGroup>
@@ -463,7 +463,7 @@ function ProfilePage() {
           </div>
         )}
 
-        <SectionLabel>Appearance</SectionLabel>
+        <SectionLabel>{t("profile.section.appearance", "Appearance")}</SectionLabel>
         <SettingsGroup>
           <SettingsRow
             icon={
@@ -475,34 +475,51 @@ function ProfilePage() {
                 <Monitor className="h-4 w-4" strokeWidth={1.8} />
               )
             }
-            title="Theme"
+            title={t("profile.theme", "Theme")}
             value={
-              themePref === "system" ? "System" : themePref === "light" ? "Light" : "Dark"
+              themePref === "system"
+                ? t("appearance.system", "System")
+                : themePref === "light"
+                  ? t("appearance.light", "Light")
+                  : t("appearance.dark", "Dark")
             }
             onClick={() => setThemeSheet(true)}
             chevron
           />
         </SettingsGroup>
 
+        <SectionLabel>{t("profile.section.language", "Language")}</SectionLabel>
+        <SettingsGroup>
+          <SettingsRow
+            icon={<Globe className="h-4 w-4" strokeWidth={1.8} />}
+            title={t("profile.language", "Language")}
+            value={
+              localePref === "system"
+                ? t("language.system", "System")
+                : (SUPPORTED_LOCALES.find((l) => l.code === localePref)?.nativeLabel ?? "English")
+            }
+            onClick={() => setLocaleSheet(true)}
+            chevron
+          />
+        </SettingsGroup>
 
-
-        <SectionLabel>Session</SectionLabel>
+        <SectionLabel>{t("profile.section.session", "Session")}</SectionLabel>
         <SettingsGroup>
           <SettingsRow
             icon={<LogOut className="h-4 w-4" strokeWidth={1.8} />}
-            title="Sign out"
-            description="You'll need to sign in and unlock again"
+            title={t("profile.signOut", "Sign out")}
+            description={t("profile.signOut.description", "You'll need to sign in and unlock again")}
             onClick={signOut}
             chevron
           />
         </SettingsGroup>
 
-        <SectionLabel>Danger zone</SectionLabel>
+        <SectionLabel>{t("profile.section.danger", "Danger zone")}</SectionLabel>
         <SettingsGroup>
           <SettingsRow
             icon={<Trash2 className="h-4 w-4" strokeWidth={1.8} />}
-            title={deleting ? "Deleting account…" : "Delete account"}
-            description="Erase your account, codes, and passphrase forever."
+            title={deleting ? t("profile.delete.busy", "Deleting account…") : t("profile.delete", "Delete account")}
+            description={t("profile.delete.description", "Erase your account, codes, and passphrase forever.")}
             onClick={handleDelete}
             disabled={deleting}
             danger
