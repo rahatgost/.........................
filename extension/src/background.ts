@@ -57,8 +57,18 @@ export type Message =
   | { type: "PING" }
   | { type: "GET_VERSION" }
   | { type: "GET_STATE" }
+  | { type: "GET_PAIRING" }
   | { type: "LOCK" }
-  | { type: "SYNC_VAULT"; userId: string; accounts: ExtAccount[]; ttlMs?: number; syncSeq?: number }
+  | {
+      type: "SYNC_VAULT";
+      userId: string;
+      accounts: ExtAccount[];
+      ttlMs?: number;
+      syncSeq?: number;
+      ts?: number;
+      nonce?: string;
+      sig?: string;
+    }
   | { type: "MATCH_HOST"; host: string }
   | { type: "GET_CODE"; accountId: string }
   | { type: "CLIPBOARD_ARMED"; tabId: number; accountId: string };
