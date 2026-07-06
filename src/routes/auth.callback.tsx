@@ -16,12 +16,29 @@ import {
 
 export const Route = createFileRoute("/auth/callback")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Signing you in — Aegis" },
+      {
+        name: "description",
+        content: "Completing your Aegis sign-in. This page redirects automatically.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+      { property: "og:title", content: "Signing you in — Aegis" },
+      {
+        property: "og:description",
+        content: "OAuth callback handler for Aegis sign-in.",
+      },
+      { property: "og:url", content: "https://hug-machine-maker.lovable.app/auth/callback" },
+    ],
+  }),
   component: CallbackPage,
   errorComponent: ({ error }) => (
     <div className="flex min-h-screen items-center justify-center p-6 text-sm">{error.message}</div>
   ),
   notFoundComponent: () => <div className="p-6 text-sm">Not found</div>,
 });
+
 
 function CallbackPage() {
   const navigate = useNavigate();
