@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Monitor, Laptop, Globe, ShieldCheck, Copy, KeyRound } from "lucide-react";
+import { Monitor, Globe, ShieldCheck, Copy, KeyRound } from "lucide-react";
 
 const URL = "https://hug-machine-maker.lovable.app/blog/google-authenticator-for-pc";
 const TITLE = "How to Use Google Authenticator on PC, Mac, and Browser (2026)";

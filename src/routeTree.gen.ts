@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevTokensRouteImport } from './routes/dev.tokens'
+import { Route as BlogGoogleAuthenticatorForPcRouteImport } from './routes/blog.google-authenticator-for-pc'
 import { Route as BlogAegisVsGoogleAuthenticatorRouteImport } from './routes/blog.aegis-vs-google-authenticator'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -52,6 +53,12 @@ const DevTokensRoute = DevTokensRouteImport.update({
   path: '/dev/tokens',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogGoogleAuthenticatorForPcRoute =
+  BlogGoogleAuthenticatorForPcRouteImport.update({
+    id: '/blog/google-authenticator-for-pc',
+    path: '/blog/google-authenticator-for-pc',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BlogAegisVsGoogleAuthenticatorRoute =
   BlogAegisVsGoogleAuthenticatorRouteImport.update({
     id: '/blog/aegis-vs-google-authenticator',
@@ -132,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/blog/aegis-vs-google-authenticator': typeof BlogAegisVsGoogleAuthenticatorRoute
+  '/blog/google-authenticator-for-pc': typeof BlogGoogleAuthenticatorForPcRoute
   '/dev/tokens': typeof DevTokensRoute
   '/profile': typeof AuthenticatedTabsProfileRoute
   '/security': typeof AuthenticatedTabsSecurityRoute
@@ -149,6 +157,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/blog/aegis-vs-google-authenticator': typeof BlogAegisVsGoogleAuthenticatorRoute
+  '/blog/google-authenticator-for-pc': typeof BlogGoogleAuthenticatorForPcRoute
   '/dev/tokens': typeof DevTokensRoute
   '/profile': typeof AuthenticatedTabsProfileRoute
   '/security': typeof AuthenticatedTabsSecurityRoute
@@ -170,6 +179,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/blog/aegis-vs-google-authenticator': typeof BlogAegisVsGoogleAuthenticatorRoute
+  '/blog/google-authenticator-for-pc': typeof BlogGoogleAuthenticatorForPcRoute
   '/dev/tokens': typeof DevTokensRoute
   '/_authenticated/_tabs/profile': typeof AuthenticatedTabsProfileRoute
   '/_authenticated/_tabs/security': typeof AuthenticatedTabsSecurityRoute
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/reset-password'
     | '/blog/aegis-vs-google-authenticator'
+    | '/blog/google-authenticator-for-pc'
     | '/dev/tokens'
     | '/profile'
     | '/security'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/reset-password'
     | '/blog/aegis-vs-google-authenticator'
+    | '/blog/google-authenticator-for-pc'
     | '/dev/tokens'
     | '/profile'
     | '/security'
@@ -226,6 +238,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/reset-password'
     | '/blog/aegis-vs-google-authenticator'
+    | '/blog/google-authenticator-for-pc'
     | '/dev/tokens'
     | '/_authenticated/_tabs/profile'
     | '/_authenticated/_tabs/security'
@@ -241,6 +254,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BlogAegisVsGoogleAuthenticatorRoute: typeof BlogAegisVsGoogleAuthenticatorRoute
+  BlogGoogleAuthenticatorForPcRoute: typeof BlogGoogleAuthenticatorForPcRoute
   DevTokensRoute: typeof DevTokensRoute
 }
 
@@ -279,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/dev/tokens'
       fullPath: '/dev/tokens'
       preLoaderRoute: typeof DevTokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/google-authenticator-for-pc': {
+      id: '/blog/google-authenticator-for-pc'
+      path: '/blog/google-authenticator-for-pc'
+      fullPath: '/blog/google-authenticator-for-pc'
+      preLoaderRoute: typeof BlogGoogleAuthenticatorForPcRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/aegis-vs-google-authenticator': {
@@ -444,6 +465,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   BlogAegisVsGoogleAuthenticatorRoute: BlogAegisVsGoogleAuthenticatorRoute,
+  BlogGoogleAuthenticatorForPcRoute: BlogGoogleAuthenticatorForPcRoute,
   DevTokensRoute: DevTokensRoute,
 }
 export const routeTree = rootRouteImport
