@@ -45,6 +45,7 @@ import {
 import { logoUrlFor, domainFromIssuer } from "@/lib/issuer-domain";
 import { useHideCodes } from "@/lib/vault-privacy";
 import { TagChip, TagInput } from "@/components/vault/tags";
+import { useLingui } from "@lingui/react";
 
 
 // Shared edit-mode motion. iOS-style ease with a slightly longer collapse
