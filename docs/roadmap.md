@@ -211,9 +211,9 @@ revoke any of them, see their sign-in history, and get a one-glance
 - [x] Origin allow-list, minimal host permissions, CSP forbidding remote code
 
 ### 10.2 Autofill flow `[P1]`
-- [ ] Content script detects `<input autocomplete="one-time-code">` + `name~=otp` heuristics
-- [ ] Offer current code from vault matched by issuer (fuzzy match on domain)
-- [ ] Copy-to-clipboard fallback with 30s auto-clear
+- [x] Content script detects `<input autocomplete="one-time-code">` + `name~=otp` heuristics
+- [x] Offer current code from vault matched by issuer (fuzzy match on domain)
+- [x] Copy-to-clipboard fallback with 30s auto-clear
 
 ### 10.3 Cross-device push `[P2]`
 - [ ] WebPush from extension to web app for "approve on this device" flows
