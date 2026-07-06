@@ -84,6 +84,22 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<DeviceRow | null>(null);
+  // Screen-reader announcements. `politeMsg` uses role="status" for
+  // non-critical success updates; `assertiveMsg` uses role="alert" for
+  // failures so AT interrupts and reads them immediately.
+  const [politeMsg, setPoliteMsg] = useState("");
+  const [assertiveMsg, setAssertiveMsg] = useState("");
+
+  const announce = (text: string, tone: "polite" | "assertive" = "polite") => {
+    // Clear then set on next tick so repeated identical messages re-announce.
+    if (tone === "assertive") {
+      setAssertiveMsg("");
+      window.setTimeout(() => setAssertiveMsg(text), 50);
+    } else {
+      setPoliteMsg("");
+      window.setTimeout(() => setPoliteMsg(text), 50);
+    }
+  };
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
