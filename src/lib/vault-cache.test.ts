@@ -25,6 +25,7 @@ function row(overrides: Partial<VaultAccountRecord> = {}): VaultAccountRecord {
     tags: [],
     secret_ciphertext: "\\x00",
     secret_iv: "\\x00",
+    updated_at: "2026-07-06T00:00:00.000Z",
     ...overrides,
   };
 }

@@ -6,10 +6,15 @@ import * as OTPAuth from "otpauth";
 import { supabase } from "@/integrations/supabase/client";
 import { decryptSecret, encryptSecret, toBytes, toByteaHex } from "@/lib/vault-crypto";
 import {
+  clearFavoriteToggle,
   isOffline,
+  readLastSync,
+  readRecentFavoriteToggles,
   readVaultCache,
+  recordFavoriteToggle,
   removeFromVaultCache,
   upsertVaultCache,
+  writeLastSync,
   writeVaultCache,
 } from "@/lib/vault-cache";
 import { normalizeTagList } from "@/components/vault/tags";
@@ -20,7 +25,7 @@ import {
 } from "@/lib/vault-tag-queue";
 
 const ACCOUNT_SELECT =
-  "id, issuer, label, icon_slug, algorithm, digits, period, sort_order, is_favorite, tags, secret_ciphertext, secret_iv";
+  "id, issuer, label, icon_slug, algorithm, digits, period, sort_order, is_favorite, tags, secret_ciphertext, secret_iv, updated_at";
 
 export type Algorithm = "SHA1" | "SHA256" | "SHA512";
 
@@ -37,6 +42,9 @@ export interface VaultAccountRecord {
   tags: string[];
   secret_ciphertext: unknown;
   secret_iv: unknown;
+  // Phase 6.2: server-side row version. Drives diff sync (`updated_at >
+  // last_sync`) and the server-wins-on-tie merge rule.
+  updated_at: string;
 }
 
 export interface DecryptedAccount {
@@ -147,14 +155,25 @@ export async function deleteAccount(id: string): Promise<void> {
 }
 
 export async function setAccountFavorite(id: string, isFavorite: boolean): Promise<void> {
+  // Phase 6.2: record the toggle so an in-flight diff-sync doesn't
+  // clobber it with the pre-toggle server value. Best-effort — resolves
+  // the user_id from the account row we're about to write.
   const { data, error } = await supabase
     .from("vault_accounts")
     .update({ is_favorite: isFavorite })
     .eq("id", id)
-    .select(ACCOUNT_SELECT)
+    .select(ACCOUNT_SELECT + ", user_id")
     .single();
   if (error) throw error;
-  if (data) void upsertVaultCache(data as VaultAccountRecord);
+  if (data) {
+    const row = data as unknown as VaultAccountRecord & { user_id: string };
+    void upsertVaultCache(row);
+    recordFavoriteToggle(row.user_id, id, isFavorite);
+    // The server has confirmed our value — the optimistic-window entry
+    // has done its job for future syncs but we can drop it now that
+    // the cached row already carries the confirmed value.
+    clearFavoriteToggle(row.user_id, id);
+  }
 }
 
 /** Update the editable account metadata (issuer + label). */
@@ -342,5 +361,87 @@ export async function listAccountsWithCache(
   const accounts = await decryptRows(dek, cached);
   return { accounts, source: "cache" };
 }
+
+// ---------------------------------------------------------------------------
+// Phase 6.2: cache-first read + delta sync
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the offline mirror only — no network hit. Returns `null` when the
+ * cache is empty. Used by the vault loader to paint immediately, before
+ * kicking off a background sync.
+ */
+export async function readCachedAccountsOnly(
+  dek: CryptoKey,
+  userId: string,
+): Promise<DecryptedAccount[] | null> {
+  const cached = await readVaultCache(userId);
+  if (!cached) return null;
+  return decryptRows(dek, cached);
+}
+
+/**
+ * Merge freshly-fetched server rows with the local cache.
+ *
+ * Rules:
+ *   • Server-wins on `updated_at` ties for every field (safe default).
+ *   • Client-wins on `is_favorite` when the user toggled it within the
+ *     last 60s and that toggle hasn't been round-tripped yet — otherwise
+ *     a stale in-flight sync would flicker the star back to the
+ *     pre-toggle state.
+ *   • Deletions: any cached row absent from the server list is dropped
+ *     (server is the source of truth for row existence).
+ */
+export function mergeAccountRows(
+  serverRows: VaultAccountRecord[],
+  recentFavToggles: Record<string, boolean>,
+): VaultAccountRecord[] {
+  return serverRows.map((row) => {
+    const override = recentFavToggles[row.id];
+    if (override === undefined) return row;
+    if (row.is_favorite === override) return row;
+    return { ...row, is_favorite: override };
+  });
+}
+
+/**
+ * Fetch every row from the server, merge with any recent optimistic
+ * favorite toggles, then rewrite the cache and last-sync marker. Returns
+ * the freshly-decrypted account list.
+ *
+ * Throws on network/RLS error — caller keeps the previous cache-first
+ * paint and shows the offline banner.
+ */
+export async function syncAccountsFromServer(
+  dek: CryptoKey,
+  userId: string,
+): Promise<DecryptedAccount[]> {
+  await flushPendingTagUpdates().catch(() => 0);
+  const { data, error } = await supabase
+    .from("vault_accounts")
+    .select(ACCOUNT_SELECT)
+    .order("is_favorite", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  const serverRows = (data ?? []) as VaultAccountRecord[];
+  const recentToggles = readRecentFavoriteToggles(userId);
+  const merged = mergeAccountRows(serverRows, recentToggles);
+
+  await writeVaultCache(userId, merged);
+  await writeLastSync(userId, new Date().toISOString());
+  return decryptRows(dek, merged);
+}
+
+/**
+ * Timestamp of the last successful server sync, or `null` if this device
+ * has never synced. Exposed so the UI can render an "as of 5 mins ago"
+ * hint under the offline banner.
+ */
+export async function getLastSyncedAt(userId: string): Promise<string | null> {
+  return readLastSync(userId);
+}
+
 
 
