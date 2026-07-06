@@ -1171,33 +1171,45 @@ export function AccountCard({
                     )}
 
                     {/* Edit-mode hint */}
-                    {editing && (
-                      <div
-                        className="mb-4 flex items-start gap-3 rounded-[14px] px-4 py-3"
-                        style={{
-                          background: "rgba(28,28,28,0.03)",
-                          border: `1px dashed ${BORDER}`,
-                        }}
-                      >
-                        <Pencil
-                          className="mt-0.5 h-4 w-4 shrink-0"
-                          strokeWidth={1.8}
-                          style={{ color: CHARCOAL }}
-                        />
-                        <div className="flex flex-col gap-0.5">
-                          <span
-                            className="text-[12.5px]"
-                            style={{ color: CHARCOAL, fontWeight: 600 }}
+                    <AnimatePresence initial={false}>
+                      {editing && (
+                        <motion.div
+                          key="edit-hint"
+                          initial={{ opacity: 0, height: 0, marginBottom: 0, y: -6 }}
+                          animate={{ opacity: 1, height: "auto", marginBottom: 16, y: 0 }}
+                          exit={{ opacity: 0, height: 0, marginBottom: 0, y: -6 }}
+                          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <div
+                            className="flex items-start gap-3 rounded-[14px] px-4 py-3"
+                            style={{
+                              background: "rgba(28,28,28,0.03)",
+                              border: `1px dashed ${BORDER}`,
+                            }}
                           >
-                            Editing account & tags
-                          </span>
-                          <span className="text-[11.5px]" style={{ color: MUTED, lineHeight: 1.5 }}>
-                            Service name and label update instantly. The TOTP secret is never
-                            changed here.
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                            <Pencil
+                              className="mt-0.5 h-4 w-4 shrink-0"
+                              strokeWidth={1.8}
+                              style={{ color: CHARCOAL }}
+                            />
+                            <div className="flex flex-col gap-0.5">
+                              <span
+                                className="text-[12.5px]"
+                                style={{ color: CHARCOAL, fontWeight: 600 }}
+                              >
+                                Editing account & tags
+                              </span>
+                              <span className="text-[11.5px]" style={{ color: MUTED, lineHeight: 1.5 }}>
+                                Service name and label update instantly. The TOTP secret is never
+                                changed here.
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
 
                     {detailsError && (
                       <p
