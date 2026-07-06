@@ -83,9 +83,13 @@ interface RawCheckResult {
   crackTimes?: Partial<Record<string, RawCrackTimeEntry>>;
 }
 
-let factoryPromise: Promise<{ check: (pw: string) => RawCheckResult }> | null = null;
+interface CheckerLike {
+  check: (pw: string) => RawCheckResult;
+}
 
-async function getFactory() {
+let factoryPromise: Promise<CheckerLike> | null = null;
+
+async function getFactory(): Promise<CheckerLike> {
   if (factoryPromise) return factoryPromise;
   factoryPromise = (async () => {
     const [core, common, en] = await Promise.all([
@@ -93,7 +97,7 @@ async function getFactory() {
       import("@zxcvbn-ts/language-common"),
       import("@zxcvbn-ts/language-en"),
     ]);
-    return new core.ZxcvbnFactory({
+    const factory = new core.ZxcvbnFactory({
       translations: en.translations,
       graphs: common.adjacencyGraphs,
       dictionary: {
@@ -101,6 +105,9 @@ async function getFactory() {
         ...en.dictionary,
       },
     });
+    return {
+      check: (pw: string) => factory.check(pw) as unknown as RawCheckResult,
+    };
   })();
   return factoryPromise;
 }
