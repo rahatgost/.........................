@@ -692,6 +692,40 @@ function VaultPage() {
           }}
         />
       )}
+
+      {selectionMode && accounts && (
+        <BulkActionsBar
+          count={selectedIds.size}
+          busy={bulkBusy}
+          onSelectAll={() =>
+            selectAllVisible((filtered ?? accounts).map((a) => a.id))
+          }
+          onCancel={exitSelection}
+          onDelete={runBulkDelete}
+          onTag={() => setBulkTagOpen(true)}
+          onExport={() => setBulkExportOpen(true)}
+        />
+      )}
+
+      {bulkTagOpen && (
+        <BulkTagSheet
+          onClose={() => setBulkTagOpen(false)}
+          onPick={(tag) => void runBulkAddTag(tag)}
+        />
+      )}
+
+      {bulkExportOpen && accounts && (
+        <ExportPassphraseSheet
+          accounts={accounts.filter((a) => selectedIds.has(a.id))}
+          onClose={() => setBulkExportOpen(false)}
+          onDone={(n) => {
+            setBulkExportOpen(false);
+            exitSelection();
+            toast.success(`Exported ${n} account${n === 1 ? "" : "s"}.`);
+          }}
+          title="Export selected"
+        />
+      )}
     </>
   );
 }
