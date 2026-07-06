@@ -71,6 +71,13 @@ function ShieldGlyph() {
   );
 }
 
+// Baked at build time from VITE_APP_URL (see extension/vite.config.ts).
+declare const __AEGIS_APP_URL__: string;
+const APP_URL: string =
+  typeof __AEGIS_APP_URL__ === "string" && __AEGIS_APP_URL__.length > 0
+    ? __AEGIS_APP_URL__
+    : "https://hug-machine-maker.lovable.app";
+
 export function App() {
   const [state, setState] = useState<State | null>(null);
   const [tabHost, setTabHost] = useState<string>("");
@@ -78,7 +85,8 @@ export function App() {
   const [matches, setMatches] = useState<Match[] | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const webAppUrl = "https://hug-machine-maker.lovable.app/vault";
+  const webAppUrl = `${APP_URL.replace(/\/$/, "")}/vault`;
+
 
   useEffect(() => {
     let alive = true;

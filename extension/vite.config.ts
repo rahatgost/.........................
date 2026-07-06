@@ -33,6 +33,21 @@ function readEnv(name: string, fallback = ""): string {
 const SUPABASE_URL = readEnv("VITE_SUPABASE_URL");
 const SUPABASE_ORIGIN = SUPABASE_URL ? new URL(SUPABASE_URL).origin : "https://*.supabase.co";
 
+// Aegis app origins the extension is allowed to talk to. Precedence:
+//   1. VITE_APP_URL         — production URL (custom domain when set)
+//   2. VITE_APP_PREVIEW_URL — Lovable preview URL for this project
+//   3. Hardcoded fallbacks  — so a fresh clone still builds
+// Set VITE_APP_URL in `.env` when you point the app at a custom domain;
+// the manifest allow-list, popup "Open vault" link, and SW origin regex
+// all pick up the new value on the next `bun run build:ext`.
+const APP_URL = readEnv("VITE_APP_URL", "https://hug-machine-maker.lovable.app");
+const APP_PREVIEW_URL = readEnv(
+  "VITE_APP_PREVIEW_URL",
+  "https://id-preview--04418077-cd09-40ce-bb05-4708ee844e27.lovable.app",
+);
+const APP_ORIGIN = new URL(APP_URL).origin;
+const APP_PREVIEW_ORIGIN = new URL(APP_PREVIEW_URL).origin;
+
 /**
  * Emit `manifest.json` + `content.js` alongside the JS bundles. Vite's
  * HTML pipeline handles the popup; background & content need explicit
@@ -45,12 +60,15 @@ function extensionManifestPlugin() {
     generateBundle() {
       const source = fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8");
       const rendered = source
-        .replaceAll("__SUPABASE_ORIGIN__", SUPABASE_ORIGIN);
+        .replaceAll("__SUPABASE_ORIGIN__", SUPABASE_ORIGIN)
+        .replaceAll("__APP_ORIGIN__", APP_ORIGIN)
+        .replaceAll("__APP_PREVIEW_ORIGIN__", APP_PREVIEW_ORIGIN);
       // @ts-expect-error - rollup plugin context is untyped here
       this.emitFile({ type: "asset", fileName: "manifest.json", source: rendered });
     },
   };
 }
+
 
 export default defineConfig({
   root: ROOT,
@@ -71,6 +89,11 @@ export default defineConfig({
     "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
       readEnv("VITE_SUPABASE_PROJECT_ID"),
     ),
+    // Aegis app origins baked in at build time. Both SW (allow-list regex)
+    // and popup ("Open vault" link) read these.
+    __AEGIS_APP_URL__: JSON.stringify(APP_URL),
+    __AEGIS_APP_ORIGIN__: JSON.stringify(APP_ORIGIN),
+    __AEGIS_APP_PREVIEW_ORIGIN__: JSON.stringify(APP_PREVIEW_ORIGIN),
   },
   build: {
     outDir: OUT_DIR,
