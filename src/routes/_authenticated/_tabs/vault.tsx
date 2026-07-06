@@ -192,6 +192,95 @@ function VaultPage() {
     [],
   );
 
+  // ---- Phase 7.3: bulk selection helpers ----
+  const enterSelection = useCallback((seedId?: string) => {
+    setSelectionMode(true);
+    if (seedId) setSelectedIds(new Set([seedId]));
+  }, []);
+  const exitSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setBulkTagOpen(false);
+    setBulkExportOpen(false);
+  }, []);
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const selectAllVisible = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
+
+  const runBulkDelete = useCallback(async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    // Optimistic removal from the list.
+    setAccounts((prev) => (prev ? prev.filter((a) => !selectedIds.has(a.id)) : prev));
+    try {
+      const results = await Promise.allSettled(ids.map((id) => deleteAccount(id)));
+      const failures = results.filter((r) => r.status === "rejected").length;
+      const queued = results.filter(
+        (r) => r.status === "fulfilled" && r.value.queued,
+      ).length;
+      setPendingOutbox(pendingOutboxCount());
+      if (failures > 0) {
+        toast.error(`${failures} deletion${failures === 1 ? "" : "s"} failed — reloading.`);
+        setReloadKey((k) => k + 1);
+      } else if (queued > 0) {
+        toast(`Queued ${queued} deletion${queued === 1 ? "" : "s"} — will sync when online.`);
+      } else {
+        toast.success(`Deleted ${ids.length} account${ids.length === 1 ? "" : "s"}.`);
+      }
+    } finally {
+      setBulkBusy(false);
+      exitSelection();
+    }
+  }, [selectedIds, exitSelection]);
+
+  const runBulkAddTag = useCallback(
+    async (tag: string) => {
+      const ids = [...selectedIds];
+      if (ids.length === 0 || !tag) return;
+      setBulkBusy(true);
+      // Optimistic — union the tag into every selected account.
+      setAccounts((prev) =>
+        prev
+          ? prev.map((a) => {
+              if (!selectedIds.has(a.id)) return a;
+              const set = new Set(a.tags ?? []);
+              set.add(tag);
+              return { ...a, tags: [...set] };
+            })
+          : prev,
+      );
+      try {
+        const results = await Promise.allSettled(
+          ids.map(async (id) => {
+            const acc = accounts?.find((a) => a.id === id);
+            if (!acc) return;
+            const next = Array.from(new Set([...(acc.tags ?? []), tag]));
+            await setAccountTags(id, next);
+          }),
+        );
+        const failures = results.filter((r) => r.status === "rejected").length;
+        refreshPendingCount();
+        if (failures > 0) toast.error(`${failures} tag update${failures === 1 ? "" : "s"} failed.`);
+        else toast.success(`Tagged ${ids.length} account${ids.length === 1 ? "" : "s"} as “${tag}”.`);
+      } finally {
+        setBulkBusy(false);
+        setBulkTagOpen(false);
+        exitSelection();
+      }
+    },
+    [selectedIds, accounts, refreshPendingCount, exitSelection],
+  );
+
+
 
   const favorites = useMemo(() => {
     const s = new Set<string>();
