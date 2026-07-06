@@ -549,6 +549,16 @@ function ProfilePage() {
             onClose={() => setThemeSheet(false)}
           />
         )}
+        {localeSheet && (
+          <LocaleSheet
+            value={localePref}
+            onChoose={(p) => {
+              chooseLocale(p);
+              setLocaleSheet(false);
+            }}
+            onClose={() => setLocaleSheet(false)}
+          />
+        )}
       </AnimatePresence>
     </>
   );
