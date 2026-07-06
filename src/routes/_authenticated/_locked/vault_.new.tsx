@@ -170,9 +170,9 @@ function NewAccountPage() {
         style={{ WebkitOverflowScrolling: "touch" as never }}
       >
         <AppBar
-          title="Add account"
+          title={t("add.appbar", "Add account")}
           trailing={
-            <AppBarButton label="Back" onClick={() => navigate({ to: "/vault" })}>
+            <AppBarButton label={t("add.back", "Back")} onClick={() => navigate({ to: "/vault" })}>
               <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
             </AppBarButton>
           }
@@ -181,7 +181,7 @@ function NewAccountPage() {
         {/* Compact hero */}
         <div className="flex flex-col gap-1.5 pt-2 pb-4">
           <h1 style={typeDisplay}>
-            {tab === "scan" ? "Scan a code" : "Enter by hand"}
+            {tab === "scan" ? t("add.hero.scan", "Scan a code") : t("add.hero.manual", "Enter by hand")}
           </h1>
           <p style={typeBody}>
             {tab === "scan"
