@@ -575,6 +575,8 @@ function UnifiedAccountList({
   onTagsChanged,
   onDetailsChanged,
   tagSuggestions,
+  dndEnabled,
+  onReorder,
 }: {
   favoriteList: DecryptedAccount[];
   otherList: DecryptedAccount[];
@@ -585,15 +587,49 @@ function UnifiedAccountList({
   onTagsChanged: (id: string, tags: string[]) => void;
   onDetailsChanged: (id: string, patch: { issuer: string; label: string }) => void;
   tagSuggestions: string[];
+  dndEnabled: boolean;
+  onReorder: (group: "fav" | "other", orderedIds: string[]) => void;
 }) {
   const showBothLabels = favoriteList.length > 0 && otherList.length > 0;
-  const combined = [...favoriteList, ...otherList];
-  const dividerAfter = favoriteList.length > 0 ? favoriteList[favoriteList.length - 1].id : null;
+
+  // Long-press activation keeps normal tap-to-copy working: a real drag
+  // only starts after the pointer is held for 220ms and moves >8px.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+  );
+
+  const favIds = useMemo(() => favoriteList.map((a) => a.id), [favoriteList]);
+  const otherIds = useMemo(() => otherList.map((a) => a.id), [otherList]);
+
+  const handleDragEnd = (group: "fav" | "other") => (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const ids = group === "fav" ? favIds : otherIds;
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    onReorder(group, arrayMove(ids, from, to));
+  };
+
+  const renderRow = (a: DecryptedAccount, opts: { withTopBorder: boolean }) => (
+    <SortableAccountRow key={a.id} id={a.id} enabled={dndEnabled} withTopBorder={opts.withTopBorder}>
+      <AccountCard
+        account={a}
+        now={now}
+        isFavorite={favorites.has(a.id)}
+        onToggleFavorite={onToggleFavorite}
+        onDelete={onDelete}
+        onTagsChanged={onTagsChanged}
+        onDetailsChanged={onDetailsChanged}
+        allTagSuggestions={tagSuggestions}
+      />
+    </SortableAccountRow>
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
       {favoriteList.length > 0 && <SectionLabel>Favorites</SectionLabel>}
-      {favoriteList.length === 0 && otherList.length > 0 && null}
       <div
         className="overflow-hidden rounded-[16px]"
         style={{
@@ -602,45 +638,72 @@ function UnifiedAccountList({
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
         }}
       >
-        <div>
-          {combined.map((a, idx) => {
-            const isLastFav = a.id === dividerAfter;
-            const isFirstOther = showBothLabels && idx === favoriteList.length;
-            return (
-              <motion.div
-                key={a.id}
-                layout="position"
-                transition={soft}
-                style={{
-                  borderTop: idx > 0 && !isFirstOther ? `1px solid ${BORDER}` : undefined,
-                }}
-              >
-                {isFirstOther && (
-                  <div className="px-4 pb-1.5 pt-3">
-                    <SectionLabel>All accounts</SectionLabel>
-                  </div>
-                )}
-                <AccountCard
-                  account={a}
-                  now={now}
-                  isFavorite={favorites.has(a.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  onDelete={onDelete}
-                  onTagsChanged={onTagsChanged}
-                  onDetailsChanged={onDetailsChanged}
-                  allTagSuggestions={tagSuggestions}
-                />
-                {isLastFav && showBothLabels && (
-                  <div style={{ height: 4, background: "transparent" }} />
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
+        {favoriteList.length > 0 && (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("fav")}>
+            <SortableContext items={favIds} strategy={verticalListSortingStrategy}>
+              <div>{favoriteList.map((a, idx) => renderRow(a, { withTopBorder: idx > 0 }))}</div>
+            </SortableContext>
+          </DndContext>
+        )}
+        {showBothLabels && (
+          <div className="px-4 pb-1.5 pt-3">
+            <SectionLabel>All accounts</SectionLabel>
+          </div>
+        )}
+        {otherList.length > 0 && (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("other")}>
+            <SortableContext items={otherIds} strategy={verticalListSortingStrategy}>
+              <div>{otherList.map((a, idx) => renderRow(a, { withTopBorder: idx > 0 }))}</div>
+            </SortableContext>
+          </DndContext>
+        )}
       </div>
     </div>
   );
 }
+
+function SortableAccountRow({
+  id,
+  enabled,
+  withTopBorder,
+  children,
+}: {
+  id: string;
+  enabled: boolean;
+  withTopBorder: boolean;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: !enabled });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    borderTop: withTopBorder ? `1px solid ${BORDER}` : undefined,
+    background: isDragging ? "rgba(28,28,28,0.04)" : undefined,
+    zIndex: isDragging ? 5 : undefined,
+    boxShadow: isDragging ? "0 6px 18px rgba(0,0,0,0.12)" : undefined,
+    touchAction: enabled ? "manipulation" : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...(enabled ? listeners : {})}
+    >
+      {children}
+    </div>
+  );
+}
+
 
 function TagFilterRow({
   tags,
