@@ -101,22 +101,89 @@ export async function syncVaultToExtension(params: {
     .filter((a) => a.otp_type !== "hotp")
     .map(stripToExtShape);
 
+  const nextSeq = LOCAL_SYNC_SEQ + 1;
+
   for (const id of ids) {
     const result: SendResult = await new Promise((resolve) => {
       try {
         runtime.sendMessage(
           id,
-          { type: "SYNC_VAULT", userId: params.userId, accounts: totp, ttlMs: params.ttlMs },
+          {
+            type: "SYNC_VAULT",
+            userId: params.userId,
+            accounts: totp,
+            ttlMs: params.ttlMs,
+            syncSeq: nextSeq,
+          },
           (res) => {
             const err = runtime.lastError?.message;
             if (err) {
               resolve({ ok: false, reason: "send_failed", detail: err });
               return;
             }
-            if (res?.ok) resolve({ ok: true, accountCount: res.accountCount ?? totp.length });
-            else resolve({ ok: false, reason: "send_failed", detail: res?.error ?? "unknown" });
+            if (res?.ok) {
+              const count = typeof res.accountCount === "number" ? res.accountCount : totp.length;
+              const seq = typeof res.syncSeq === "number" ? res.syncSeq : nextSeq;
+              resolve({ ok: true, accountCount: count, syncSeq: seq });
+            } else {
+              const detail = typeof res?.error === "string" ? res.error : "unknown";
+              resolve({ ok: false, reason: "send_failed", detail });
+            }
           },
         );
+      } catch (e) {
+        resolve({
+          ok: false,
+          reason: "send_failed",
+          detail: e instanceof Error ? e.message : "throw",
+        });
+      }
+    });
+    if (result.ok) {
+      LOCAL_SYNC_SEQ = nextSeq;
+      return result;
+    }
+  }
+  return { ok: false, reason: "send_failed" };
+}
+
+/**
+ * Cheap read-only ping: asks the extension SW for current state (unlocked
+ * flag, account count, sync counter). Used by the heartbeat to detect SW
+ * eviction / TTL expiry without shipping any vault contents.
+ */
+export async function pingExtensionState(extensionIds?: readonly string[]): Promise<ExtensionState> {
+  const runtime = getRuntime();
+  if (!runtime) return { ok: false, reason: "no_extension" };
+
+  const discovered = discoverExtensionId();
+  const ids = extensionIds ?? (discovered ? [discovered] : []);
+  if (ids.length === 0) return { ok: false, reason: "no_id" };
+
+  for (const id of ids) {
+    const result: ExtensionState = await new Promise((resolve) => {
+      try {
+        runtime.sendMessage(id, { type: "GET_STATE" }, (res) => {
+          const err = runtime.lastError?.message;
+          if (err) {
+            resolve({ ok: false, reason: "send_failed", detail: err });
+            return;
+          }
+          if (!res?.ok) {
+            const detail = typeof res?.error === "string" ? res.error : "unknown";
+            resolve({ ok: false, reason: "send_failed", detail });
+            return;
+          }
+          resolve({
+            ok: true,
+            unlocked: !!res.unlocked,
+            accountCount: typeof res.accountCount === "number" ? res.accountCount : 0,
+            expiresAt: typeof res.expiresAt === "number" ? res.expiresAt : 0,
+            syncSeq: typeof res.syncSeq === "number" ? res.syncSeq : 0,
+            syncedAt: typeof res.syncedAt === "number" ? res.syncedAt : 0,
+            userId: typeof res.userId === "string" ? res.userId : "",
+          });
+        });
       } catch (e) {
         resolve({
           ok: false,
@@ -129,3 +196,4 @@ export async function syncVaultToExtension(params: {
   }
   return { ok: false, reason: "send_failed" };
 }
+
