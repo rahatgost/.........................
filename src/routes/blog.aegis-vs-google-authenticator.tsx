@@ -7,7 +7,7 @@ const OG_IMAGE = `https://hug-machine-maker.lovable.app${ogImageAsset.url}`;
 const URL = "https://hug-machine-maker.lovable.app/blog/aegis-vs-google-authenticator";
 const TITLE = "Aegis vs Google Authenticator — the secure TOTP authenticator";
 const DESCRIPTION =
-  "A side-by-side comparison of Aegis and Google Authenticator. See why a zero-knowledge, end-to-end encrypted secure TOTP authenticator with multi-device sync is a better Google Authenticator alternative in 2026.";
+  "Compare Aegis and Google Authenticator: zero-knowledge, end-to-end encrypted TOTP codes with multi-device sync, in one secure authenticator.";
 
 export const Route = createFileRoute("/blog/aegis-vs-google-authenticator")({
   head: () => ({
