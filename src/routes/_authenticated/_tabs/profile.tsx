@@ -33,6 +33,14 @@ import {
 } from "@/components/aegis/chrome";
 import { LargeTitle, SectionLabel, SettingsGroup, SettingsRow } from "@/components/aegis/settings";
 import { getThemePref, setThemePref, type ThemePref } from "@/lib/theme";
+import {
+  SUPPORTED_LOCALES,
+  getLocalePref,
+  setLocalePref,
+  type LocalePref,
+} from "@/lib/i18n";
+import { useLingui } from "@lingui/react";
+import { Globe } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_tabs/profile")({
   component: ProfilePage,
