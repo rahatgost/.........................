@@ -62,9 +62,11 @@ export interface VaultAccountRecord {
   secret_iv: unknown;
   // Phase 7.4: OTP variant discriminator (server sees the type but never
   // the HOTP counter — that lives in the encrypted counter_ciphertext).
-  otp_type: OtpType;
-  counter_ciphertext: unknown | null;
-  counter_iv: unknown | null;
+  // Optional because rows cached before the 7.4 migration lack these; read
+  // paths default to 'totp'.
+  otp_type?: OtpType;
+  counter_ciphertext?: unknown | null;
+  counter_iv?: unknown | null;
   // Phase 6.2: server-side row version. Drives diff sync (`updated_at >
   // last_sync`) and the server-wins-on-tie merge rule.
   updated_at: string;
