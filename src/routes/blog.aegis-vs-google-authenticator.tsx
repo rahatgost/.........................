@@ -162,11 +162,11 @@ function ComparisonPage() {
           </h2>
           <div
             className="mt-4 overflow-hidden rounded-2xl border"
-            style={{ borderColor: "rgba(28,28,28,0.10)", background: "var(--aegis-cream-soft)" }}
+            style={{ borderColor: "rgb(var(--aegis-ink-rgb) / 0.10)", background: "var(--aegis-cream-soft)" }}
           >
             <table className="w-full text-left text-[14px]">
               <thead>
-                <tr style={{ background: "rgba(28,28,28,0.03)" }}>
+                <tr style={{ background: "rgb(var(--aegis-ink-rgb) / 0.03)" }}>
                   <th className="px-4 py-3 font-semibold">Feature</th>
                   <th className="px-4 py-3 font-semibold">Aegis</th>
                   <th className="px-4 py-3 font-semibold">Google Authenticator</th>
@@ -303,7 +303,7 @@ function VerdictCard({
     <div
       className="rounded-2xl border p-5"
       style={{
-        borderColor: highlight ? "rgba(28,28,28,0.35)" : "rgba(28,28,28,0.10)",
+        borderColor: highlight ? "rgb(var(--aegis-ink-rgb) / 0.35)" : "rgb(var(--aegis-ink-rgb) / 0.10)",
         background: highlight ? "var(--aegis-ink)" : "var(--aegis-cream-soft)",
         color: highlight ? "var(--aegis-cream)" : "var(--aegis-ink)",
       }}
