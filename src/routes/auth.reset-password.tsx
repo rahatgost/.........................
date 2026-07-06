@@ -19,12 +19,30 @@ import {
 
 export const Route = createFileRoute("/auth/reset-password")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Reset your Aegis password" },
+      {
+        name: "description",
+        content:
+          "Choose a new password for your Aegis account. Your encrypted vault stays untouched.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+      { property: "og:title", content: "Reset your Aegis password" },
+      {
+        property: "og:description",
+        content: "Set a new password on your Aegis account.",
+      },
+      { property: "og:url", content: "https://hug-machine-maker.lovable.app/auth/reset-password" },
+    ],
+  }),
   component: ResetPasswordPage,
   errorComponent: ({ error }) => (
     <div className="flex min-h-screen items-center justify-center p-6 text-sm">{error.message}</div>
   ),
   notFoundComponent: () => <div className="p-6 text-sm">Not found</div>,
 });
+
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
