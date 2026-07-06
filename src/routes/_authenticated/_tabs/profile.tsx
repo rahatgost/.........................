@@ -66,6 +66,8 @@ function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarSheet, setAvatarSheet] = useState(false);
+  const [themeSheet, setThemeSheet] = useState(false);
+
   const [notice, setNotice] = useState<{ kind: "error" | "info"; text: string } | null>(null);
   const [themePref, setThemePrefState] = useState<ThemePref>(() => getThemePref());
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -427,28 +429,25 @@ function ProfilePage() {
 
         <SectionLabel>Appearance</SectionLabel>
         <SettingsGroup>
-          <ThemeRow
-            icon={<Monitor className="h-4 w-4" strokeWidth={1.8} />}
-            title="System"
-            description="Follow your device."
-            active={themePref === "system"}
-            onClick={() => chooseTheme("system")}
-          />
-          <ThemeRow
-            icon={<Sun className="h-4 w-4" strokeWidth={1.8} />}
-            title="Light"
-            description="Warm cream, always."
-            active={themePref === "light"}
-            onClick={() => chooseTheme("light")}
-          />
-          <ThemeRow
-            icon={<Moon className="h-4 w-4" strokeWidth={1.8} />}
-            title="Dark"
-            description="Easy on the eyes."
-            active={themePref === "dark"}
-            onClick={() => chooseTheme("dark")}
+          <SettingsRow
+            icon={
+              themePref === "dark" ? (
+                <Moon className="h-4 w-4" strokeWidth={1.8} />
+              ) : themePref === "light" ? (
+                <Sun className="h-4 w-4" strokeWidth={1.8} />
+              ) : (
+                <Monitor className="h-4 w-4" strokeWidth={1.8} />
+              )
+            }
+            title="Theme"
+            value={
+              themePref === "system" ? "System" : themePref === "light" ? "Light" : "Dark"
+            }
+            onClick={() => setThemeSheet(true)}
+            chevron
           />
         </SettingsGroup>
+
 
 
         <SectionLabel>Session</SectionLabel>
@@ -487,10 +486,21 @@ function ProfilePage() {
             onClose={() => setAvatarSheet(false)}
           />
         )}
+        {themeSheet && (
+          <ThemeSheet
+            value={themePref}
+            onChoose={(p) => {
+              chooseTheme(p);
+              setThemeSheet(false);
+            }}
+            onClose={() => setThemeSheet(false)}
+          />
+        )}
       </AnimatePresence>
     </>
   );
 }
+
 
 function ThemeRow({
   icon,
@@ -545,6 +555,85 @@ function ThemeRow({
     </motion.button>
   );
 }
+
+function ThemeSheet({
+  value,
+  onChoose,
+  onClose,
+}: {
+  value: ThemePref;
+  onChoose: (pref: ThemePref) => void;
+  onClose: () => void;
+}) {
+  const options: { pref: ThemePref; icon: React.ReactNode; title: string; description: string }[] = [
+    { pref: "system", icon: <Monitor className="h-4 w-4" strokeWidth={1.8} />, title: "System", description: "Follow your device." },
+    { pref: "light", icon: <Sun className="h-4 w-4" strokeWidth={1.8} />, title: "Light", description: "Warm cream, always." },
+    { pref: "dark", icon: <Moon className="h-4 w-4" strokeWidth={1.8} />, title: "Dark", description: "Easy on the eyes." },
+  ];
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.button
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0"
+        style={{ background: "rgb(var(--aegis-ink-rgb) / 0.35)", backdropFilter: "blur(4px)" }}
+      />
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={soft}
+        className="relative z-10 mx-auto w-full max-w-[440px] rounded-t-[22px] px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 sm:rounded-[22px]"
+        style={{
+          background: CREAM_SOFT,
+          border: `1px solid ${BORDER}`,
+          boxShadow: "0 -12px 40px -12px rgba(0,0,0,0.25)",
+        }}
+      >
+        <div
+          className="mx-auto mb-4 h-1 w-10 rounded-full"
+          style={{ background: "rgb(var(--aegis-ink-rgb) / 0.15)" }}
+        />
+        <div
+          className="mb-3 px-1 text-[11px] uppercase"
+          style={{ color: MUTED, letterSpacing: "0.14em", fontWeight: 600 }}
+        >
+          Appearance
+        </div>
+        <div
+          className="overflow-hidden rounded-[16px]"
+          style={{ border: `1px solid ${BORDER}`, background: "rgb(var(--aegis-ink-rgb) / 0.02)" }}
+        >
+          {options.map((opt, i) => (
+            <div key={opt.pref}>
+              {i > 0 && <div style={{ height: 1, background: BORDER, marginLeft: 60 }} />}
+              <ThemeRow
+                icon={opt.icon}
+                title={opt.title}
+                description={opt.description}
+                active={value === opt.pref}
+                onClick={() => onChoose(opt.pref)}
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-3 w-full rounded-[14px] px-4 py-3 text-[13.5px]"
+          style={{ color: MUTED, fontWeight: 500 }}
+        >
+          Cancel
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 
 function AvatarActionSheet({
   hasAvatar,
