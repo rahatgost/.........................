@@ -113,6 +113,11 @@
   --aegis-danger-rgb: 180 40 40;
   --aegis-fav: #c99a2b;
   --aegis-placeholder: rgba(28, 28, 28, 0.45);
+  --aegis-success: #4a8f5a;
+  --aegis-success-rgb: 74 143 90;
+  --aegis-warning: #c9a24a;
+  --aegis-warning-rgb: 201 162 74;
+  --aegis-scanner-bg: #0a0a0a;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 
   /* backdrop glows (warm cream sunrise) */
