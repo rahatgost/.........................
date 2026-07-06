@@ -314,6 +314,7 @@ Aegis in under 15 minutes and pass the same RLS test we ship.
 ### Testing pyramid
 - [x] Unit tests for crypto + import parsers
 - [x] Component tests for `ScanTab` (Vitest + Testing Library)
+- [x] Integration tests for offline export/restore + cache recovery paths (`src/lib/offline-recovery.test.ts`)
 - [ ] Component tests for `AccountCard`, `PasteTab`, `AvfPassStage`
 - [ ] Playwright end-to-end for onboarding → add → export → restore on second device, in CI on every PR touching `src/routes/**`
 
