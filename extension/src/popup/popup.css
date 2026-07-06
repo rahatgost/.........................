@@ -1,12 +1,24 @@
-/* Popup shell — mirrors the web app's cream palette from src/styles.css
-   but ships as a standalone stylesheet so the extension build doesn't
-   need to pull the full Tailwind theme graph. */
+/* Aegis popup — mirrors the warm-cream design system in
+   src/components/aegis/chrome.tsx. Standalone CSS so the extension
+   build never has to pull the full Tailwind theme graph. */
 
 :root {
   --cream: #f7f4ed;
+  --cream-soft: #fbf9f4;
   --charcoal: #1f1d1a;
+  --charcoal-rgb: 31, 29, 26;
   --muted: #6b6862;
   --border: #eceae4;
+  --success: #3c8c5a;
+  --warning: #b47a2d;
+  --danger: #c04a3a;
+  --glow-a: rgba(214, 189, 145, 0.45);
+  --glow-b: rgba(233, 210, 175, 0.35);
+  --glow-c: rgba(196, 172, 132, 0.35);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html,
@@ -21,16 +33,39 @@ body {
 }
 
 body {
-  width: 340px;
-  min-height: 220px;
+  width: 360px;
+  min-height: 260px;
+  position: relative;
+  overflow: hidden;
 }
 
-h1 {
-  font-family: "Playfair Display", serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  margin: 0;
+/* Subtle backdrop glow — same recipe as web app <Backdrop /> */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 20% 0%, var(--glow-a), transparent 55%),
+    radial-gradient(90% 70% at 90% 15%, var(--glow-b), transparent 60%),
+    radial-gradient(100% 80% at 50% 100%, var(--glow-c), transparent 60%);
+  z-index: 0;
+}
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: radial-gradient(rgba(31, 29, 26, 0.06) 1px, transparent 1px);
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 .wrap {
@@ -40,17 +75,41 @@ h1 {
   gap: 14px;
 }
 
-.row {
+/* ---------- brand bar ---------- */
+
+.brand {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-
-.muted {
-  color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.5;
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--charcoal);
+  color: var(--cream-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    rgba(255, 255, 255, 0.2) 0 0.5px 0 0 inset,
+    rgba(0, 0, 0, 0.2) 0 0 0 0.5px inset,
+    rgba(0, 0, 0, 0.05) 0 1px 2px 0;
+}
+.brand-mark svg {
+  width: 14px;
+  height: 14px;
+}
+.brand-word {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .pill {
@@ -58,57 +117,87 @@ h1 {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.06);
+  background: rgba(255, 255, 255, 0.55);
   border-radius: 999px;
-  font-size: 11px;
-  letter-spacing: 0.6px;
+  font-size: 10px;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--muted);
-  background: transparent;
-}
-
-.btn {
-  appearance: none;
-  border: 1px solid var(--charcoal);
-  background: var(--charcoal);
-  color: var(--cream);
-  padding: 9px 14px;
-  border-radius: 999px;
-  font: inherit;
+  color: rgba(var(--charcoal-rgb), 0.65);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-weight: 500;
-  cursor: pointer;
-  transition: opacity 120ms ease;
-}
-.btn:hover {
-  opacity: 0.9;
-}
-.btn.ghost {
-  background: transparent;
-  color: var(--charcoal);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
 }
 
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 2px -18px;
+/* ---------- headline block ---------- */
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
 }
+.headline h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--charcoal);
+  margin: 0;
+}
+.headline .sub {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---------- status chip ---------- */
 
 .status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--cream-soft);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
   color: var(--muted);
+  align-self: flex-start;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
-.dot {
+.status .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3c8c5a;
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(60, 140, 90, 0.15);
 }
-.dot.warn {
-  background: #b47a2d;
+.status.warn .dot {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px rgba(180, 122, 45, 0.15);
 }
+
+/* ---------- surfaces ---------- */
+
+.card {
+  background: var(--cream-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.card .card-title {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  margin-bottom: 8px;
+}
+
+/* ---------- match rows ---------- */
 
 .list {
   display: flex;
@@ -120,22 +209,131 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 4px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--cream-soft);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.matchRow:hover {
+  border-color: rgba(var(--charcoal-rgb), 0.18);
 }
 .matchRow .issuer {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--charcoal);
 }
 .matchRow .label {
   font-size: 11.5px;
   color: var(--muted);
+  margin-top: 2px;
 }
 .matchRow .actions {
   display: flex;
   gap: 6px;
 }
-.matchRow .btn {
-  padding: 5px 10px;
+
+/* ---------- buttons ---------- */
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--charcoal);
+  background: var(--charcoal);
+  color: var(--cream-soft);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+  box-shadow:
+    rgba(255, 255, 255, 0.2) 0 0.5px 0 0 inset,
+    rgba(0, 0, 0, 0.2) 0 0 0 0.5px inset,
+    rgba(0, 0, 0, 0.08) 0 1px 2px 0;
+}
+.btn:hover {
+  opacity: 0.92;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn.ghost {
+  background: var(--cream-soft);
+  color: var(--charcoal);
+  border-color: var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.btn.block {
+  width: 100%;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+.btn.small {
+  padding: 6px 12px;
   font-size: 12px;
+}
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ---------- misc ---------- */
+
+.muted {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+.muted strong {
+  color: var(--charcoal);
+  font-weight: 500;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px -18px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(var(--charcoal-rgb), 0.45);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.footer button {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.footer button:hover {
+  color: var(--charcoal);
 }

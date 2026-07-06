@@ -15,8 +15,6 @@
 /// <reference types="chrome" />
 
 import { useEffect, useMemo, useState } from "react";
-import { VAULT_CRYPTO_VERSION } from "@/lib/vault-crypto";
-import { isBiometricSupported } from "@/lib/biometric";
 import { normalizeHost } from "@/lib/domain-match";
 // Value import proves vault-accounts still bundles for the extension.
 import * as vaultAccounts from "@/lib/vault-accounts";
@@ -45,9 +43,36 @@ function send<T = unknown>(msg: unknown): Promise<T> {
   });
 }
 
+/** Present the active tab's host without any hosting-provider noise. */
+function prettyHost(host: string): string {
+  if (!host) return "";
+  // Strip trailing preview/production suffixes so the user sees the app's identity,
+  // not the hosting provider's subdomain.
+  const cleaned = host
+    .replace(/\.lovable\.(app|dev)$/i, "")
+    .replace(/\.vercel\.app$/i, "")
+    .replace(/\.netlify\.app$/i, "")
+    .replace(/^id-preview--[^.]+--/i, "")
+    .replace(/^[a-f0-9-]{36}--/i, "");
+  return cleaned || host;
+}
+
+function ShieldGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3 4 6v6c0 4.5 3.2 8.4 8 9 4.8-.6 8-4.5 8-9V6l-8-3Z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function App() {
   const [state, setState] = useState<State | null>(null);
-  const [bio, setBio] = useState<boolean | null>(null);
   const [tabHost, setTabHost] = useState<string>("");
   const [tabId, setTabId] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[] | null>(null);
@@ -67,8 +92,6 @@ export function App() {
         });
       }
     });
-
-    void isBiometricSupported().then((v) => alive && setBio(v));
 
     void chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       const t = tabs[0];
@@ -98,10 +121,8 @@ export function App() {
     };
   }, [state?.unlocked, tabHost]);
 
-  const heading = useMemo(() => {
-    if (!tabHost) return "Aegis";
-    return tabHost;
-  }, [tabHost]);
+  const hostLabel = useMemo(() => prettyHost(tabHost), [tabHost]);
+  const version = chrome.runtime.getManifest().version;
 
   async function fill(m: Match) {
     if (tabId == null) return;
@@ -110,7 +131,6 @@ export function App() {
       accountId: m.id,
     });
     if (!res.ok || !res.code) return;
-    // Ask the content script to set the value on the focused input.
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
@@ -153,53 +173,71 @@ export function App() {
 
   return (
     <div className="wrap">
-      <div className="row">
-        <h1>{heading}</h1>
-        <span className="pill">v{chrome.runtime.getManifest().version}</span>
+      <div className="brand">
+        <div className="brand-left">
+          <span className="brand-mark">
+            <ShieldGlyph />
+          </span>
+          <span className="brand-word">Aegis</span>
+        </div>
+        <span className="pill">v{version}</span>
       </div>
 
       {state === null ? (
-        <p className="muted">Connecting…</p>
+        <>
+          <div className="headline">
+            <h1>Connecting…</h1>
+            <p className="sub">Talking to the vault service worker.</p>
+          </div>
+        </>
       ) : !state.unlocked ? (
         <>
-          <p className="muted">
-            Aegis is locked. Open the web app, unlock your vault, then
-            press <em>Sync to extension</em> to send accounts here for
-            the next {Math.round(5)} minutes.
-          </p>
-          <div className="status">
-            <span className="dot warn" />
-            Locked (crypto v{VAULT_CRYPTO_VERSION})
+          <div className="headline">
+            <h1>Vault is locked</h1>
+            <p className="sub">
+              Open the web app, unlock, then tap <strong>Sync to browser
+              extension</strong> in Security to send accounts here.
+            </p>
           </div>
-          <div className="row">
-            <span className="muted">
-              Biometric{" "}
-              {bio === null ? "…" : bio ? "available" : "unavailable"}
-            </span>
-            <button
-              className="btn"
-              onClick={() => chrome.tabs.create({ url: webAppUrl })}
-            >
-              Open vault
-            </button>
+          <div className="status warn">
+            <span className="dot" />
+            Locked
           </div>
+          <button
+            className="btn block"
+            onClick={() => chrome.tabs.create({ url: webAppUrl })}
+          >
+            Open vault
+          </button>
         </>
       ) : (
         <>
+          <div className="headline">
+            <h1>{hostLabel || "Ready"}</h1>
+            <p className="sub">
+              {hostLabel
+                ? "Matching accounts from your synced vault."
+                : "Open a login page to see matching accounts."}
+            </p>
+          </div>
+
           <div className="status">
             <span className="dot" />
             Unlocked · {state.accountCount} account
             {state.accountCount === 1 ? "" : "s"}
           </div>
 
-          <div className="divider" />
-
           {matches === null ? (
             <p className="muted">Looking for matches…</p>
           ) : matches.length === 0 ? (
-            <p className="muted">
-              No matching accounts for <strong>{tabHost || "this tab"}</strong>.
-            </p>
+            <div className="card">
+              <div className="card-title">No match</div>
+              <p className="muted">
+                Nothing in your vault matches{" "}
+                <strong>{hostLabel || "this tab"}</strong>. Open the web app to
+                add a new account.
+              </p>
+            </div>
           ) : (
             <div className="list">
               {matches.map((m) => (
@@ -210,13 +248,13 @@ export function App() {
                   </div>
                   <div className="actions">
                     <button
-                      className="btn ghost"
+                      className="btn ghost small"
                       onClick={() => copy(m)}
                       title="Copy code (auto-clears in 30s)"
                     >
                       {copied === m.id ? "Copied" : "Copy"}
                     </button>
-                    <button className="btn" onClick={() => fill(m)}>
+                    <button className="btn small" onClick={() => fill(m)}>
                       Fill
                     </button>
                   </div>
@@ -225,10 +263,8 @@ export function App() {
             </div>
           )}
 
-          <div className="divider" />
-          <div className="row">
+          <div className="footer">
             <button
-              className="btn ghost"
               onClick={async () => {
                 await send({ type: "LOCK" });
                 setState({ ...state, unlocked: false, accountCount: 0 });
@@ -237,11 +273,8 @@ export function App() {
             >
               Lock now
             </button>
-            <button
-              className="btn"
-              onClick={() => chrome.tabs.create({ url: webAppUrl })}
-            >
-              Open vault
+            <button onClick={() => chrome.tabs.create({ url: webAppUrl })}>
+              Open vault →
             </button>
           </div>
         </>
