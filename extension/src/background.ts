@@ -483,12 +483,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
-  try {
-    sendResponse(handle(msg, sender));
-  } catch (e) {
-    sendResponse({ ok: false, error: e instanceof Error ? e.message : "error" });
-  }
-  return true;
+  handle(msg, sender)
+    .then(sendResponse)
+    .catch((e) => sendResponse({ ok: false, error: e instanceof Error ? e.message : "error" }));
+  return true; // keep the port open for the async response
 });
 
 chrome.runtime.onMessageExternal.addListener((msg: Message, sender, sendResponse) => {
@@ -498,26 +496,28 @@ chrome.runtime.onMessageExternal.addListener((msg: Message, sender, sendResponse
     sendResponse({ ok: false, error: "forbidden_origin" });
     return;
   }
-  // External senders may only sync or query state — never mint codes
-  // (that path is popup/content-script only, to keep code emission tied
-  // to a user action inside the extension surface).
-  if (msg.type !== "SYNC_VAULT" && msg.type !== "GET_STATE" && msg.type !== "PING" && msg.type !== "LOCK") {
+  // External senders may only sync, pair, or query state — never mint codes.
+  const externalAllowed: ReadonlySet<string> = new Set([
+    "SYNC_VAULT",
+    "GET_STATE",
+    "GET_PAIRING",
+    "PING",
+    "LOCK",
+  ]);
+  if (!externalAllowed.has(msg.type)) {
     swLog("external reject: forbidden_message", msg.type);
     sendResponse({ ok: false, error: "forbidden_message" });
     return;
   }
-  // Rate-limit SYNC_VAULT per origin to make a hostile script that lands
-  // on an allow-listed origin unable to spam the SW with vault swaps.
   if (msg.type === "SYNC_VAULT" && !checkRate(origin!)) {
     swLog("SYNC_VAULT rate_limited", origin);
     sendResponse({ ok: false, error: "rate_limited" });
     return;
   }
-  try {
-    sendResponse(handle(msg, sender));
-  } catch (e) {
-    sendResponse({ ok: false, error: e instanceof Error ? e.message : "error" });
-  }
+  handle(msg, sender)
+    .then(sendResponse)
+    .catch((e) => sendResponse({ ok: false, error: e instanceof Error ? e.message : "error" }));
+  return true;
 });
 
 // Re-exported for the popup's typed sendMessage.
