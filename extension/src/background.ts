@@ -75,6 +75,15 @@ export type Response =
 const IDLE_LOCK_MS = 5 * 60 * 1000;
 const CLIPBOARD_CLEAR_MS = 30 * 1000;
 
+/**
+ * Verbose SW logging for heartbeat / eviction / lock testing.
+ * See docs/extension-heartbeat-test.md. Flip to false to silence.
+ */
+const SW_DEBUG = true;
+function swLog(...args: unknown[]): void {
+  if (SW_DEBUG) console.log("[aegis-sw]", ...args);
+}
+
 // Held in the SW's globalThis. MV3 will evict this when the worker is
 // suspended (~30 s of idleness) — that's a feature, not a bug: the vault
 // re-locks itself when nobody's looking.
