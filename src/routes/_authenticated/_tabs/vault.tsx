@@ -10,6 +10,8 @@ import {
 import {
   deleteAccount,
   flushPendingTagUpdates,
+  flushPendingOutbox,
+  pendingOutboxCount,
   readCachedAccountsOnly,
   setAccountFavorite,
   setAccountTags,
