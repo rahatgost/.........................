@@ -195,7 +195,8 @@ in production, no hard-coded colours in `src/components/aegis/*`.
 - [x] Optional HIBP lookup for issuer domains (k-anonymity endpoint)
 
 ### 9.4 Passphrase strength on change `[P1]`
-- [ ] Port export passphrase meter to change-passphrase, refuse `zxcvbn score < 3`
+- [x] Port export passphrase meter to change-passphrase, refuse `zxcvbn score < 3`
+
 
 **Exit criteria:** A user can see every device signed into their vault,
 revoke any of them, see their sign-in history, and get a one-glance
