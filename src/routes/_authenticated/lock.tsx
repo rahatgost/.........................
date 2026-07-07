@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   createNewVaultKey,
   unwrapVaultKey,
+  upgradeKdfToV2,
+  needsKdfUpgrade,
   toBytes,
   toByteaHex,
-  KDF_ALGORITHM,
 } from "@/lib/vault-crypto";
 import { setVaultKey } from "@/lib/vault-session";
 import {
@@ -245,21 +246,45 @@ function LockPage() {
         .eq("user_id", user.id)
         .single();
       if (error) throw error;
-      if (data.kdf_algorithm !== KDF_ALGORITHM) {
-        throw new Error("Vault was created with a different key algorithm.");
-      }
+      const currentAlgo = data.kdf_algorithm;
+      const salt = toBytes(data.kdf_salt);
+      const wrappedKey = toBytes(data.recovery_wrapped_key);
+      const wrappedIv = toBytes(data.recovery_wrapped_key_iv);
       try {
-        const dek = await unwrapVaultKey(
-          passphrase,
-          toBytes(data.kdf_salt),
-          toBytes(data.recovery_wrapped_key),
-          toBytes(data.recovery_wrapped_key_iv),
-        );
+        const dek = await unwrapVaultKey(passphrase, salt, wrappedKey, wrappedIv, currentAlgo);
         // Success — clear any accumulated failure counter.
         recordSuccess(user.id);
         setCooldownLeft(0);
         setVaultKey(dek);
         await maybeEnrollBiometric(dek);
+        // Transparent KDF upgrade: if this vault is still on the legacy
+        // PBKDF2 wrapper, re-wrap the same DEK under Argon2id and
+        // persist. Best-effort — a failure here doesn't block the user
+        // from unlocking; we'll retry next time.
+        if (needsKdfUpgrade(currentAlgo)) {
+          void (async () => {
+            try {
+              const upgraded = await upgradeKdfToV2(
+                passphrase,
+                salt,
+                wrappedKey,
+                wrappedIv,
+                currentAlgo,
+              );
+              await supabase
+                .from("vault_meta")
+                .update({
+                  kdf_salt: toByteaHex(upgraded.salt),
+                  kdf_algorithm: upgraded.kdfAlgorithm,
+                  recovery_wrapped_key: toByteaHex(upgraded.wrappedKey),
+                  recovery_wrapped_key_iv: toByteaHex(upgraded.wrappedKeyIv),
+                })
+                .eq("user_id", user.id);
+            } catch (upgradeErr) {
+              console.warn("[vault] KDF upgrade failed, will retry", upgradeErr);
+            }
+          })();
+        }
         routeAfterUnlock();
       } catch (cryptoErr) {
         // WebCrypto throws OperationError with an empty message in Chrome
