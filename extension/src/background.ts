@@ -107,6 +107,7 @@ function isUnlocked(): boolean {
   if (!unlocked) return false;
   if (Date.now() > unlocked.expiresAt) {
     unlocked = null;
+    void updateBadge();
     return false;
   }
   return true;
@@ -114,6 +115,28 @@ function isUnlocked(): boolean {
 
 function touch() {
   if (unlocked) unlocked.expiresAt = Date.now() + IDLE_LOCK_MS;
+}
+
+/* --------------------------------------------------------------------- */
+/*  Toolbar badge / title reflects lock state                            */
+/* --------------------------------------------------------------------- */
+
+async function updateBadge(): Promise<void> {
+  try {
+    if (isUnlocked() && unlocked) {
+      await chrome.action.setBadgeBackgroundColor({ color: "#3c8c5a" });
+      await chrome.action.setBadgeText({ text: String(unlocked.accounts.length) });
+      await chrome.action.setTitle({
+        title: `Aegis · ${unlocked.accounts.length} account${unlocked.accounts.length === 1 ? "" : "s"} unlocked`,
+      });
+    } else {
+      await chrome.action.setBadgeBackgroundColor({ color: "#b47a2d" });
+      await chrome.action.setBadgeText({ text: "" });
+      await chrome.action.setTitle({ title: "Aegis · locked" });
+    }
+  } catch {
+    /* action API may be unavailable during SW startup on Firefox */
+  }
 }
 
 /* --------------------------------------------------------------------- */
@@ -339,6 +362,7 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
     case "LOCK":
       swLog("LOCK requested");
       unlocked = null;
+      void updateBadge();
       return { ok: true };
 
     case "SYNC_VAULT": {
@@ -399,6 +423,7 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
         syncSeq: seq,
       };
       swLog("SYNC_VAULT ok", { seq, count: cleaned.length, ttlMs: ttl, signed: isExternal });
+      void updateBadge();
       return { ok: true, accountCount: cleaned.length, syncSeq: seq, syncedAt: now };
     }
 
@@ -456,7 +481,15 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("aegis-keepalive", { periodInMinutes: 1 });
+  void updateBadge();
 });
+
+chrome.runtime.onStartup?.addListener(() => {
+  void updateBadge();
+});
+
+// Refresh badge whenever the SW module first evaluates (also runs on wake).
+void updateBadge();
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "aegis-keepalive") {
@@ -465,6 +498,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (unlocked && Date.now() > unlocked.expiresAt) {
       swLog("TTL expired, clearing unlocked vault");
       unlocked = null;
+      void updateBadge();
     }
     return;
   }
@@ -479,6 +513,51 @@ chrome.alarms.onAlarm.addListener((alarm) => {
           /* tab probably closed — nothing we can do from the SW */
         });
     }
+  }
+});
+
+/* --------------------------------------------------------------------- */
+/*  Keyboard shortcut: Ctrl+Shift+L → fill top match on active tab       */
+/* --------------------------------------------------------------------- */
+
+chrome.commands?.onCommand.addListener(async (name) => {
+  if (name !== "fill-otp") return;
+  if (!isUnlocked() || !unlocked) {
+    swLog("cmd fill-otp skip: locked");
+    return;
+  }
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !tab.url) return;
+    const host = normalizeHost(new URL(tab.url).hostname);
+    if (!host) return;
+    const ranked = rankMatches(host, unlocked.accounts);
+    if (ranked.length === 0) {
+      swLog("cmd fill-otp: no match for", host);
+      return;
+    }
+    const acct = ranked[0].account;
+    const code = generateCode(acct);
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [code],
+      func: (c: string) => {
+        const el = document.activeElement as HTMLInputElement | null;
+        if (!el || el.tagName !== "INPUT") return;
+        const setter = Object.getOwnPropertyDescriptor(
+          Object.getPrototypeOf(el),
+          "value",
+        )?.set;
+        if (setter) setter.call(el, c);
+        else el.value = c;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+    });
+    touch();
+    swLog("cmd fill-otp ok", { issuer: acct.issuer });
+  } catch (e) {
+    swLog("cmd fill-otp error", e);
   }
 });
 

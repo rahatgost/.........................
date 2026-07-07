@@ -119,6 +119,18 @@ function clearPairing(extId: string): void {
   }
 }
 
+/**
+ * Public helper for the "Re-pair" button on the Security page. Wipes the
+ * cached pairing key for the currently-detected extension so the next
+ * SYNC_VAULT triggers a fresh GET_PAIRING handshake.
+ */
+export function clearExtensionPairing(): boolean {
+  const id = discoverExtensionId();
+  if (!id) return false;
+  clearPairing(id);
+  return true;
+}
+
 async function fetchPairingKey(runtime: ChromeRuntimeLike, extId: string): Promise<string | null> {
   const res = await new Promise<Record<string, unknown> | undefined>((resolve) => {
     try {
