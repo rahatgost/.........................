@@ -15,7 +15,10 @@ import {
   EyeOff,
   Fingerprint,
   Download,
+  KeySquare,
 } from "lucide-react";
+import { isPinEnabled as isPinEnabledFn, enrollPin, disablePin } from "@/lib/pin-unlock";
+import { PinPad } from "@/components/aegis/PinPad";
 
 import { DevicesSection } from "@/components/aegis/devices-section";
 import { ExtensionSyncSection } from "@/components/aegis/extension-sync-section";
@@ -119,6 +122,8 @@ function SecurityPage() {
   const [bioSupported, setBioSupported] = useState(false);
   const [bioEnrolled, setBioEnrolled] = useState<boolean>(() => isBiometricEnabled(user.id));
   const [bioBusy, setBioBusy] = useState(false);
+  const [pinEnrolled, setPinEnrolled] = useState<boolean>(() => isPinEnabledFn(user.id));
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,6 +287,47 @@ function SecurityPage() {
               />
             }
           />
+          <SettingsRow
+            icon={<KeySquare className="h-4 w-4" strokeWidth={1.8} />}
+            title="PIN quick unlock"
+            description={
+              pinEnrolled
+                ? "A 4–6 digit PIN unlocks this device. 5 wrong tries disables it."
+                : "Skip typing your passphrase — set a short PIN for this device."
+            }
+            onClick={() => {
+              if (pinEnrolled) {
+                const ok = window.confirm(
+                  "Remove PIN unlock from this device?\n\nYou'll need your master passphrase to unlock next time.",
+                );
+                if (!ok) return;
+                disablePin(user.id);
+                setPinEnrolled(false);
+                setNotice({ kind: "info", text: "PIN unlock removed from this device." });
+              } else {
+                setPinSetupOpen(true);
+              }
+            }}
+            trailing={
+              <Switch
+                checked={pinEnrolled}
+                onCheckedChange={(v) => {
+                  if (v) {
+                    setPinSetupOpen(true);
+                  } else {
+                    disablePin(user.id);
+                    setPinEnrolled(false);
+                    setNotice({
+                      kind: "info",
+                      text: "PIN unlock removed from this device.",
+                    });
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="PIN quick unlock"
+              />
+            }
+          />
         </SettingsGroup>
 
         <SectionLabel>{t("security.section.devices", "Devices")}</SectionLabel>
@@ -403,6 +449,17 @@ function SecurityPage() {
                 kind: "info",
                 text: `Encrypted export downloaded (${count} ${count === 1 ? "account" : "accounts"}).`,
               });
+            }}
+          />
+        )}
+        {pinSetupOpen && (
+          <PinSetupSheet
+            userId={user.id}
+            onClose={() => setPinSetupOpen(false)}
+            onDone={() => {
+              setPinSetupOpen(false);
+              setPinEnrolled(true);
+              setNotice({ kind: "info", text: "PIN unlock is enabled on this device." });
             }}
           />
         )}
@@ -848,3 +905,164 @@ function ExportSheet({
     </motion.div>
   );
 }
+
+function PinSetupSheet({
+  userId,
+  onClose,
+  onDone,
+}: {
+  userId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [step, setStep] = useState<"enter" | "confirm">("enter");
+  const [firstPin, setFirstPin] = useState("");
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [shake, setShake] = useState(false);
+
+  const shakeAndReset = (message: string) => {
+    setErr(message);
+    setShake(true);
+    window.setTimeout(() => setShake(false), 500);
+    setPin("");
+  };
+
+  const handleComplete = async (value: string) => {
+    setErr(null);
+    if (step === "enter") {
+      if (value.length < 4) return;
+      setFirstPin(value);
+      setPin("");
+      setStep("confirm");
+      return;
+    }
+    // confirm step
+    if (value !== firstPin) {
+      shakeAndReset("PINs don't match. Try again.");
+      return;
+    }
+    const dek = getVaultKey();
+    if (!dek) {
+      setErr("Vault is locked. Unlock first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await enrollPin({ userId, pin: value, dek });
+      onDone();
+    } catch (e) {
+      shakeAndReset(e instanceof Error ? e.message : "Could not save PIN.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const title = step === "enter" ? "Set a device PIN" : "Confirm your PIN";
+  const subtitle =
+    step === "enter"
+      ? "4–6 digits. Only this device — never synced, never leaves here."
+      : "Enter the same PIN once more to confirm.";
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.button
+        aria-label="Close"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0"
+        style={{ background: "rgb(var(--aegis-ink-rgb) / 0.35)", backdropFilter: "blur(4px)" }}
+      />
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={soft}
+        className="relative z-10 mx-auto w-full max-w-[440px] rounded-t-[22px] px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-5 sm:rounded-[22px]"
+        style={{
+          background: CREAM_SOFT,
+          border: `1px solid ${BORDER}`,
+          boxShadow: "0 -12px 40px -12px rgba(0,0,0,0.25)",
+        }}
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <div
+              className="text-[18px]"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: CHARCOAL,
+              }}
+            >
+              {title}
+            </div>
+            <div className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
+              {subtitle}
+            </div>
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ background: "rgb(var(--aegis-ink-rgb) / 0.06)", color: CHARCOAL }}
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" strokeWidth={1.8} />
+          </motion.button>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 pb-2">
+          <PinPad
+            value={pin}
+            onChange={setPin}
+            onComplete={handleComplete}
+            shake={shake}
+            disabled={busy}
+          />
+          {err && (
+            <div className="w-full">
+              <Notice kind="error">{err}</Notice>
+            </div>
+          )}
+          {step === "enter" && pin.length >= 4 && pin.length < 6 && (
+            <button
+              type="button"
+              onClick={() => handleComplete(pin)}
+              disabled={busy}
+              className="text-[12.5px] underline underline-offset-2"
+              style={{ color: MUTED }}
+            >
+              Use this {pin.length}-digit PIN
+            </button>
+          )}
+          {step === "confirm" && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep("enter");
+                setPin("");
+                setFirstPin("");
+                setErr(null);
+              }}
+              className="text-[12.5px] underline underline-offset-2"
+              style={{ color: MUTED }}
+            >
+              Start over
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
