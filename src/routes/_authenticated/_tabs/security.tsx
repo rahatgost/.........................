@@ -289,6 +289,8 @@ function SecurityPage() {
         <SignInHistorySection heading={t("security.signInHistory", "Sign-in history")} />
 
         <ExtensionSyncSection />
+        <ExtensionTrustSection />
+        <ApprovalSection />
 
 
 
