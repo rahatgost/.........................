@@ -551,8 +551,9 @@ function ChangePassphraseSheet({
         .eq("user_id", userId);
       if (upErr) throw upErr;
       // Re-unlock with the new passphrase so the in-memory DEK stays valid.
-      const freshDek = await unwrapVaultKey(next, salt, wrappedKey, wrappedKeyIv);
-      setVaultKey(freshDek);
+      const { dek: freshDek, rawDek: freshRaw } = await unwrapVaultKey(next, salt, wrappedKey, wrappedKeyIv);
+      setVaultKey(freshDek, freshRaw);
+
       onSaved(trimmedHint);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Could not change passphrase.");
