@@ -12,6 +12,12 @@ import {
 } from "@/lib/vault-crypto";
 import { setVaultKey } from "@/lib/vault-session";
 import {
+  getFailureCount,
+  recordFailure,
+  recordSuccess,
+  remainingCooldownMs,
+} from "@/lib/unlock-throttle";
+import {
   disableBiometric,
   enrollBiometric,
   isBiometricEnabled,
@@ -94,6 +100,19 @@ function LockPage() {
   const [bioEnrolled, setBioEnrolled] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const [bioAutoTried, setBioAutoTried] = useState(false);
+  const [cooldownLeft, setCooldownLeft] = useState<number>(() =>
+    remainingCooldownMs(user.id),
+  );
+
+  // Poll the cooldown countdown while active so the button re-enables
+  // itself the moment the window expires.
+  useEffect(() => {
+    if (cooldownLeft <= 0) return;
+    const id = window.setInterval(() => {
+      setCooldownLeft(remainingCooldownMs(user.id));
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [cooldownLeft, user.id]);
 
   useEffect(() => {
     let cancelled = false;
