@@ -97,6 +97,13 @@ function LockPage() {
   const [bioEnrolled, setBioEnrolled] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const [bioAutoTried, setBioAutoTried] = useState(false);
+  const [pinEnrolled, setPinEnrolled] = useState<boolean>(() => isPinEnabled(user.id));
+  const [pinValue, setPinValue] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinShake, setPinShake] = useState(false);
+  const [unlockMethod, setUnlockMethod] = useState<UnlockMethod>(() =>
+    isPinEnabled(user.id) ? "pin" : "passphrase",
+  );
 
   useEffect(() => {
     let cancelled = false;
