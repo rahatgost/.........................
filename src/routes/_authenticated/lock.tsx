@@ -59,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/lock")({
         property: "og:description",
         content: "Passphrase gate that unlocks your Aegis vault on this device.",
       },
-      { property: "og:url", content: "https://hug-machine-maker.lovable.app/lock" },
+      { property: "og:url", content: "https://aegis-syed.lovable.app/lock" },
     ],
   }),
   component: LockPage,
