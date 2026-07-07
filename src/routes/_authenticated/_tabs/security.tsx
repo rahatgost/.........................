@@ -155,9 +155,10 @@ function SecurityPage() {
     setNotice(null);
     try {
       if (next) {
-        const dek = getVaultKey();
-        if (!dek) throw new Error("Vault is locked. Unlock first to enable biometrics.");
-        await enrollBiometric({ userId: user.id, userEmail: user.email ?? user.id, dek });
+        const dekBytes = getVaultRawKey();
+        if (!dekBytes) throw new Error("Vault is locked. Unlock first to enable biometrics.");
+        await enrollBiometric({ userId: user.id, userEmail: user.email ?? user.id, dekBytes });
+
         setBioEnrolled(true);
         setNotice({ kind: "info", text: "Biometric unlock enabled on this device." });
       } else {
