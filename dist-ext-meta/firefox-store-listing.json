@@ -1,5 +1,5 @@
 {
-  "target": "chrome",
+  "target": "firefox",
   "version": "0.3.0",
   "homepageUrl": "https://hug-machine-maker.lovable.app",
   "privacyPolicyUrl": "https://hug-machine-maker.lovable.app/privacy",
