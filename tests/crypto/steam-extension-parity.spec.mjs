@@ -3,13 +3,17 @@
 // Regression guard for the bug where the extension treated `otp_type: "steam"`
 // as a plain 6-digit TOTP and thus filled the wrong code into the page.
 //
-// We reimport the web-app generator and mirror the extension's exact routine
-// (copied from extension/src/background.ts). If they diverge for any T-slot
-// this test fails loudly.
+// The extension bundle can't be imported from Node directly (it's a Vite
+// artifact targeting a browser worker), so we mirror the exact routine from
+// extension/src/background.ts::generateSteamCode here and compare against
+// the web-app generator from src/lib/vault-accounts.ts. If they diverge for
+// any T-slot, this test fails loudly and the extension zips are unsafe to ship.
 
-import { describe, it, expect } from "vitest";
+import test from "node:test";
+import assert from "node:assert/strict";
 import * as OTPAuth from "otpauth";
-import { generateCode as webGenerate } from "../../src/lib/vault-accounts.ts";
+
+const { generateCode: webGenerate } = await import("../../src/lib/vault-accounts.ts");
 
 const STEAM_ALPHABET = "23456789BCDFGHJKMNPQRTVWXY";
 const STEAM_PERIOD = 30;
@@ -31,43 +35,38 @@ function extGenerateSteam(secretBase32, at) {
   return out;
 }
 
-const secrets = [
+const SECRETS = [
   "JBSWY3DPEHPK3PXP",
   "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
   "KRSXG5CTMVRXEZLU",
 ];
 
-describe("Steam OTP parity — extension vs web", () => {
-  for (const secret of secrets) {
-    it(`matches for secret ${secret}`, () => {
-      // Sample several time slots (past, present, future) so we cover
-      // multiple T counters, not just whatever slot we happen to be in.
-      const now = Date.now();
-      for (const offset of [-90_000, -30_000, 0, 30_000, 90_000, 3_600_000]) {
-        const at = now + offset;
-        const web = webGenerate(
-          {
-            id: "x",
-            issuer: "Steam",
-            label: "test",
-            secret,
-            algorithm: "SHA1",
-            digits: 5,
-            period: STEAM_PERIOD,
-            otp_type: "steam",
-          },
-          at,
-        );
-        const ext = extGenerateSteam(secret, at);
-        expect(ext).toBe(web);
-        expect(ext).toMatch(/^[23456789BCDFGHJKMNPQRTVWXY]{5}$/);
-      }
-    });
+test("Steam OTP parity — extension mirrors web across time slots", () => {
+  const now = Date.now();
+  for (const secret of SECRETS) {
+    for (const offset of [-90_000, -30_000, 0, 30_000, 90_000, 3_600_000]) {
+      const at = now + offset;
+      const web = webGenerate(
+        {
+          id: "x",
+          issuer: "Steam",
+          label: "test",
+          secret,
+          algorithm: "SHA1",
+          digits: 5,
+          period: STEAM_PERIOD,
+          otp_type: "steam",
+        },
+        at,
+      );
+      const ext = extGenerateSteam(secret, at);
+      assert.equal(ext, web, `mismatch @ ${new Date(at).toISOString()} for ${secret}`);
+      assert.match(ext, /^[23456789BCDFGHJKMNPQRTVWXY]{5}$/);
+    }
   }
+});
 
-  it("is deterministic within the same 30s slot", () => {
-    const secret = secrets[0];
-    const t = 1_800_000_000_000;
-    expect(extGenerateSteam(secret, t)).toBe(extGenerateSteam(secret, t + 5_000));
-  });
+test("Steam OTP is stable inside a single 30s window", () => {
+  const t = 1_800_000_000_000;
+  assert.equal(extGenerateSteam(SECRETS[0], t), extGenerateSteam(SECRETS[0], t + 5_000));
 });
