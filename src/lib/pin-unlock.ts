@@ -98,10 +98,17 @@ export function disablePin(userId: string): void {
 }
 
 /**
- * Validate PIN format. Digits only, length 4-6.
+ * PIN length is fixed at 6 digits — matches iOS/banking conventions and
+ * gives ~1M keyspace which, combined with the 5-attempt local wipe below,
+ * is a workable balance of speed and safety.
+ */
+export const PIN_LENGTH = 6 as const;
+
+/**
+ * Validate PIN format. Digits only, exactly PIN_LENGTH.
  */
 export function isValidPin(pin: string): boolean {
-  return /^\d{4,6}$/.test(pin);
+  return new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
 }
 
 /**
@@ -110,14 +117,14 @@ export function isValidPin(pin: string): boolean {
  * common list. Returns a human-readable reason when weak, else null.
  */
 export function assessPinWeakness(pin: string): string | null {
-  if (!isValidPin(pin)) return "PIN must be 4–6 digits.";
+  if (!isValidPin(pin)) return `PIN must be exactly ${PIN_LENGTH} digits.`;
 
-  // All same digit: 0000, 1111, ...
+  // All same digit: 111111, 000000, ...
   if (/^(\d)\1+$/.test(pin)) {
     return "PIN can't be all the same digit.";
   }
 
-  // Ascending or descending sequences: 1234, 123456, 4321, 987654, ...
+  // Ascending or descending sequences: 123456, 987654, ...
   let asc = true;
   let desc = true;
   for (let i = 1; i < pin.length; i++) {
@@ -125,19 +132,25 @@ export function assessPinWeakness(pin: string): string | null {
     if (d !== 1) asc = false;
     if (d !== -1) desc = false;
   }
-  if (asc || desc) return "PIN can't be a simple sequence like 1234.";
+  if (asc || desc) return "PIN can't be a simple sequence like 123456.";
 
-  // Common leaked-PIN list (short curated set).
+  // Common leaked / obvious 6-digit PIN list (curated).
   const common = new Set([
-    "1212", "0101", "1010", "1122", "2211", "1313", "2020", "6969", "4321",
-    "1004", "2000", "1004", "0007", "2580", "5683", "7777", "0852",
-    "123123", "121212", "112233", "101010", "112211", "159753", "147258",
-    "789456", "456789", "252525", "159357", "013579", "246810",
+    "123123", "121212", "112233", "101010", "111222", "159753",
+    "147258", "258369", "789456", "456789", "252525", "159357",
+    "013579", "246810", "654321", "121314", "131313", "010203",
+    "121121", "212121", "202020", "696969", "000007", "007007",
   ]);
   if (common.has(pin)) return "That PIN is too common. Please choose another.";
 
+  // No 3-in-a-row repeat like 111xxx or xxx999.
+  if (/(\d)\1{2}/.test(pin)) {
+    return "Avoid three or more of the same digit in a row.";
+  }
+
   return null;
 }
+
 
 /* ---------------- KDF ---------------- */
 
