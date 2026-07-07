@@ -287,6 +287,47 @@ function SecurityPage() {
               />
             }
           />
+          <SettingsRow
+            icon={<KeySquare className="h-4 w-4" strokeWidth={1.8} />}
+            title="PIN quick unlock"
+            description={
+              pinEnrolled
+                ? "A 4–6 digit PIN unlocks this device. 5 wrong tries disables it."
+                : "Skip typing your passphrase — set a short PIN for this device."
+            }
+            onClick={() => {
+              if (pinEnrolled) {
+                const ok = window.confirm(
+                  "Remove PIN unlock from this device?\n\nYou'll need your master passphrase to unlock next time.",
+                );
+                if (!ok) return;
+                disablePin(user.id);
+                setPinEnrolled(false);
+                setNotice({ kind: "info", text: "PIN unlock removed from this device." });
+              } else {
+                setPinSetupOpen(true);
+              }
+            }}
+            trailing={
+              <Switch
+                checked={pinEnrolled}
+                onCheckedChange={(v) => {
+                  if (v) {
+                    setPinSetupOpen(true);
+                  } else {
+                    disablePin(user.id);
+                    setPinEnrolled(false);
+                    setNotice({
+                      kind: "info",
+                      text: "PIN unlock removed from this device.",
+                    });
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="PIN quick unlock"
+              />
+            }
+          />
         </SettingsGroup>
 
         <SectionLabel>{t("security.section.devices", "Devices")}</SectionLabel>
