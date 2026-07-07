@@ -922,48 +922,77 @@ function PinSetupSheet({
   const [err, setErr] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-  const shakeAndReset = (message: string) => {
+  const shakeAndClear = (message: string) => {
     setErr(message);
     setShake(true);
     window.setTimeout(() => setShake(false), 500);
-    setPin("");
+    // Small delay so the user sees the 6th dot before it clears — matches
+    // iOS lock-screen feel.
+    window.setTimeout(() => setPin(""), 180);
   };
 
+  // Fires when PinPad hits exactly PIN_LENGTH digits (auto) or when the user
+  // manually invokes it. Serialized behind `busy` so a fast double-tap on the
+  // final digit can't double-invoke enrollment.
   const handleComplete = async (value: string) => {
-    setErr(null);
+    if (busy) return;
+    if (value.length !== PIN_LENGTH) return;
+
     if (step === "enter") {
-      if (value.length < 4) return;
-      setFirstPin(value);
-      setPin("");
-      setStep("confirm");
+      // Validate strength *before* asking the user to type it again — no
+      // point wasting a confirm round on a rejected PIN.
+      const weakness = assessPinWeakness(value);
+      if (weakness) {
+        shakeAndClear(weakness);
+        return;
+      }
+      // Brief pause so the user sees all 6 dots filled before the transition.
+      setErr(null);
+      window.setTimeout(() => {
+        setFirstPin(value);
+        setPin("");
+        setStep("confirm");
+      }, 160);
       return;
     }
+
     // confirm step
     if (value !== firstPin) {
-      shakeAndReset("PINs don't match. Try again.");
+      shakeAndClear("PINs don't match. Try again.");
       return;
     }
     const dek = getVaultKey();
     if (!dek) {
-      setErr("Vault is locked. Unlock first.");
+      setErr("Vault is locked. Unlock first, then try again.");
       return;
     }
     setBusy(true);
+    setErr(null);
     try {
       await enrollPin({ userId, pin: value, dek });
       onDone();
     } catch (e) {
-      shakeAndReset(e instanceof Error ? e.message : "Could not save PIN.");
+      // Fall the user all the way back to step 1 — a save failure means the
+      // pair is untrusted; don't let them re-confirm the same PIN.
+      const message = e instanceof Error ? e.message : "Could not save PIN.";
+      setErr(message);
+      setShake(true);
+      window.setTimeout(() => setShake(false), 500);
+      window.setTimeout(() => {
+        setStep("enter");
+        setFirstPin("");
+        setPin("");
+      }, 180);
     } finally {
       setBusy(false);
     }
   };
 
-  const title = step === "enter" ? "Set a device PIN" : "Confirm your PIN";
+  const title = step === "enter" ? "Create your PIN" : "Confirm your PIN";
   const subtitle =
     step === "enter"
-      ? "4–6 digits. Only this device — never synced, never leaves here."
-      : "Enter the same PIN once more to confirm.";
+      ? "6 digits. Stays on this device — never synced, never leaves."
+      : "Enter the same 6 digits once more.";
 
   return (
     <motion.div
@@ -974,7 +1003,7 @@ function PinSetupSheet({
     >
       <motion.button
         aria-label="Close"
-        onClick={onClose}
+        onClick={busy ? undefined : onClose}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -994,26 +1023,43 @@ function PinSetupSheet({
         }}
       >
         <div className="mb-4 flex items-start justify-between">
-          <div>
+          <div className="min-w-0">
             <div
-              className="text-[18px]"
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 600,
-                letterSpacing: "-0.01em",
-                color: CHARCOAL,
-              }}
+              className="text-[11px] uppercase tracking-[0.14em]"
+              style={{ color: MUTED }}
             >
-              {title}
+              Step {step === "enter" ? "1" : "2"} of 2
             </div>
-            <div className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
-              {subtitle}
-            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={soft}
+              >
+                <div
+                  className="mt-1 text-[18px]"
+                  style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontWeight: 600,
+                    letterSpacing: "-0.01em",
+                    color: CHARCOAL,
+                  }}
+                >
+                  {title}
+                </div>
+                <div className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
+                  {subtitle}
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full"
+            onClick={busy ? undefined : onClose}
+            disabled={busy}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full disabled:opacity-50"
             style={{ background: "rgb(var(--aegis-ink-rgb) / 0.06)", color: CHARCOAL }}
             aria-label="Close"
           >
@@ -1021,16 +1067,15 @@ function PinSetupSheet({
           </motion.button>
         </div>
 
-        <div className="flex flex-col items-center gap-4 pb-2">
+        <div className="flex flex-col items-center gap-4 pb-2 pt-2">
           <PinPad
             value={pin}
             onChange={(next) => {
-              // Clear stale error the moment the user starts typing again.
               if (err) setErr(null);
               setPin(next);
             }}
             onComplete={handleComplete}
-            length={step === "confirm" && firstPin.length > 0 ? firstPin.length : 6}
+            length={PIN_LENGTH}
             shake={shake}
             disabled={busy}
           />
@@ -1041,50 +1086,31 @@ function PinSetupSheet({
             </div>
           )}
 
-          {/* Enter step: explicit Continue button so 4/5-digit PINs work
-              without hunting for a link. 6-digit auto-continues via onComplete. */}
-          {step === "enter" && (
-            <div className="flex w-full flex-col items-center gap-2">
-              <PrimaryButton
-                type="button"
-                onClick={() => handleComplete(pin)}
-                disabled={busy || pin.length < 4}
-                loading={busy}
-              >
-                Continue
-              </PrimaryButton>
-              <p className="text-[11.5px]" style={{ color: MUTED }}>
-                {pin.length < 4
-                  ? "Choose 4 to 6 digits."
-                  : `${pin.length}-digit PIN — tap Continue or add more digits.`}
-              </p>
-            </div>
+          {step === "confirm" && !busy && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep("enter");
+                setPin("");
+                setFirstPin("");
+                setErr(null);
+              }}
+              className="text-[12.5px] underline underline-offset-2"
+              style={{ color: MUTED }}
+            >
+              Start over
+            </button>
           )}
 
-          {step === "confirm" && (
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-[11.5px]" style={{ color: MUTED }}>
-                Re-enter your {firstPin.length}-digit PIN.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("enter");
-                  setPin("");
-                  setFirstPin("");
-                  setErr(null);
-                }}
-                disabled={busy}
-                className="text-[12.5px] underline underline-offset-2 disabled:opacity-50"
-                style={{ color: MUTED }}
-              >
-                Start over
-              </button>
-            </div>
+          {busy && (
+            <p className="text-[12px]" style={{ color: MUTED }}>
+              Saving your PIN…
+            </p>
           )}
         </div>
       </motion.div>
     </motion.div>
   );
 }
+
 
