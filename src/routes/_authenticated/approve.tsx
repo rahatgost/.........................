@@ -269,13 +269,15 @@ function ApprovePage() {
           >
             Reject
           </button>
-          <PrimaryButton
+          <button
+            type="button"
             onClick={() => mutation.mutate({ deny: false })}
             disabled={busy}
-            className="flex-1"
+            className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition disabled:opacity-50"
+            style={{ background: CHARCOAL, color: CREAM_SOFT }}
           >
             {busy ? "Working…" : "Approve"}
-          </PrimaryButton>
+          </button>
         </div>
       </div>
     </FramePanel>
