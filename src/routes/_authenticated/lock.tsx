@@ -556,21 +556,31 @@ function LockPage() {
 
         {(isCreate || unlockMethod === "passphrase") && (
           <div className="flex flex-col gap-3">
-            {/* PIN shortcut sits ABOVE the passphrase field so the fast-path
-                is the first thing the user sees on this screen. */}
-            {!isCreate && pinEnrolled && (
+            {/* PIN shortcut sits ABOVE the passphrase field. Shown even when
+                the user hasn't enrolled a PIN yet — the "setup" variant
+                routes to Security so the option is always discoverable. */}
+            {!isCreate && (
               <MethodCard
-                variant="pin"
+                variant={pinEnrolled ? "pin" : "pin-setup"}
                 onClick={() => {
                   setNotice(null);
-                  setPassphrase("");
-                  setUnlockMethod("pin");
+                  if (pinEnrolled) {
+                    setPassphrase("");
+                    setUnlockMethod("pin");
+                  } else {
+                    // Not enrolled: send them to Security to set one up.
+                    // They'll need to unlock first, so hint that in the notice.
+                    setNotice({
+                      kind: "info",
+                      text: "Unlock with your passphrase first, then enable PIN in Security.",
+                    });
+                  }
                 }}
                 disabled={loading}
               />
             )}
 
-            {!isCreate && pinEnrolled && (
+            {!isCreate && (
               <div className="flex items-center gap-3">
                 <div
                   className="h-px flex-1"
