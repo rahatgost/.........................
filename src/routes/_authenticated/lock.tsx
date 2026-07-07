@@ -272,9 +272,10 @@ function LockPage() {
     setNotice(null);
     setBioBusy(true);
     try {
-      const dek = await unlockWithBiometric(user.id);
-      setVaultKey(dek);
+      const { dek, rawDek } = await unlockWithBiometric(user.id);
+      setVaultKey(dek, rawDek);
       routeAfterUnlock();
+
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Biometric unlock failed.";
       // If the stored blob is broken (e.g. cleared), drop it so user isn't stuck.
