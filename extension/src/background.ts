@@ -362,6 +362,7 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
     case "LOCK":
       swLog("LOCK requested");
       unlocked = null;
+      void updateBadge();
       return { ok: true };
 
     case "SYNC_VAULT": {
@@ -422,6 +423,7 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
         syncSeq: seq,
       };
       swLog("SYNC_VAULT ok", { seq, count: cleaned.length, ttlMs: ttl, signed: isExternal });
+      void updateBadge();
       return { ok: true, accountCount: cleaned.length, syncSeq: seq, syncedAt: now };
     }
 
