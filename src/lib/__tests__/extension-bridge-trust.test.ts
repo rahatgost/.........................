@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Regression test for `ext_bridge_spoof` (agent_security scan).
 //
 // Before the fix, `isExtensionInstalled()` returned true for ANY extension
