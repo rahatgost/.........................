@@ -301,6 +301,14 @@ function SecurityPage() {
             onClick={() => setCloudBackupOpen(true)}
             chevron
           />
+          <SettingsRow
+            icon={<CalendarClock className="h-4 w-4" strokeWidth={1.8} />}
+            title={t("security.autoBackup", "Scheduled auto-backup")}
+            value={autoBackupSummary(autoBackup)}
+            onClick={() => setAutoBackupOpen(true)}
+            chevron
+          />
+
         </SettingsGroup>
 
 
