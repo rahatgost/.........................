@@ -1491,6 +1491,61 @@ function AutoBackupSheet({
             )}
           </div>
 
+          <div className="rounded-[12px] px-3 py-2" style={{ background: "rgb(var(--aegis-ink-rgb) / 0.03)", border: `1px solid ${BORDER}` }}>
+            <div className="mb-1.5 flex items-center justify-between">
+              <div className="text-[11px] uppercase" style={{ color: MUTED, letterSpacing: "0.14em", fontWeight: 600 }}>
+                Activity
+              </div>
+              {log.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => clearAutoBackupLog(userId)}
+                  className="text-[11px] underline"
+                  style={{ color: MUTED }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {log.length === 0 ? (
+              <div className="text-[12px]" style={{ color: MUTED }}>No auto-backup activity yet.</div>
+            ) : (
+              <ul className="flex max-h-[180px] flex-col gap-1 overflow-y-auto pr-1">
+                {log.map((e, i) => {
+                  const dot =
+                    e.kind === "success" ? "#16a34a" :
+                    e.kind === "error" ? "#dc2626" :
+                    e.kind === "start" ? "#2563eb" :
+                    e.kind === "skipped" ? "#a3a3a3" :
+                    "#d97706";
+                  const label =
+                    e.kind === "success" ? "Success" :
+                    e.kind === "error" ? "Failed" :
+                    e.kind === "start" ? "Upload started" :
+                    e.kind === "skipped" ? "Skipped" :
+                    "Change";
+                  return (
+                    <li key={`${e.at}-${i}`} className="flex items-start gap-2 text-[12px]" style={{ color: CHARCOAL }}>
+                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: dot }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span style={{ fontWeight: 500 }}>{label}</span>
+                          <span className="text-[10.5px]" style={{ color: MUTED }} title={new Date(e.at).toLocaleString()}>
+                            {relTime(e.at)}
+                          </span>
+                        </div>
+                        {e.message && (
+                          <div className="truncate text-[11.5px]" style={{ color: MUTED }}>{e.message}</div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+
           {err && (
             <div className="rounded-[12px] px-3 py-2 text-[12.5px]" style={{ background: "rgba(239,68,68,0.08)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.25)" }}>
               {err}
