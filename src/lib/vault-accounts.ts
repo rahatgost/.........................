@@ -35,6 +35,19 @@ import {
   type CreatePayload,
 } from "@/lib/vault-outbox";
 
+// Fired after any successful vault mutation (create/edit/delete/reorder/HOTP).
+// Auto-backup and other listeners subscribe to this on window.
+export const VAULT_CHANGED_EVENT = "aegis:vault-changed";
+function emitVaultChanged(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new Event(VAULT_CHANGED_EVENT));
+  } catch {
+    // ignore
+  }
+}
+
+
 const ACCOUNT_SELECT =
   "id, issuer, label, icon_slug, algorithm, digits, period, sort_order, is_favorite, tags, secret_ciphertext, secret_iv, otp_type, counter_ciphertext, counter_iv, updated_at";
 
