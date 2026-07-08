@@ -326,6 +326,7 @@ export async function addAccount(
 
   if (isOffline()) {
     await enqueueOfflineCreate();
+    emitVaultChanged();
     return { queued: true };
   }
 
@@ -337,10 +338,12 @@ export async function addAccount(
       .single();
     if (error) throw error;
     if (data) void upsertVaultCache(data as VaultAccountRecord);
+    emitVaultChanged();
     return { queued: false };
   } catch (err) {
     if (isLikelyNetworkError(err)) {
       await enqueueOfflineCreate();
+      emitVaultChanged();
       return { queued: true };
     }
     throw err;
@@ -431,6 +434,7 @@ export async function deleteAccount(id: string): Promise<{ queued: boolean }> {
   if (isOffline()) {
     enqueueDelete(id);
     void removeFromVaultCache(id);
+    emitVaultChanged();
     return { queued: true };
   }
 
@@ -438,11 +442,13 @@ export async function deleteAccount(id: string): Promise<{ queued: boolean }> {
     await attempt();
     dequeueOutbox(id);
     void removeFromVaultCache(id);
+    emitVaultChanged();
     return { queued: false };
   } catch (err) {
     if (isLikelyNetworkError(err)) {
       enqueueDelete(id);
       void removeFromVaultCache(id);
+      emitVaultChanged();
       return { queued: true };
     }
     throw err;
@@ -485,16 +491,19 @@ export async function setAccountFavorite(
   if (isOffline()) {
     enqueueFavorite(id, isFavorite);
     await patchCacheFavorite();
+    emitVaultChanged();
     return { queued: true };
   }
 
   try {
     await attempt();
+    emitVaultChanged();
     return { queued: false };
   } catch (err) {
     if (isLikelyNetworkError(err)) {
       enqueueFavorite(id, isFavorite);
       await patchCacheFavorite();
+      emitVaultChanged();
       return { queued: true };
     }
     throw err;
