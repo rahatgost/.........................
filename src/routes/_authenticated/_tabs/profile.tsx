@@ -719,6 +719,7 @@ function ProfilePage() {
           />
         )}
       </AnimatePresence>
+      <PlanComparisonSheet open={compareSheet} onClose={() => setCompareSheet(false)} />
     </>
   );
 }
