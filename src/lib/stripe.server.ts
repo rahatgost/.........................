@@ -9,12 +9,9 @@ export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
   return new Stripe(key, {
-    // Cast: pin a known version without depending on Stripe's internal ApiVersion literal type.
-    apiVersion: "2025-01-27.acacia" as Stripe.StripeConfig["apiVersion"] extends never
-      ? never
-      : Stripe.StripeConfig["apiVersion"],
+    apiVersion: "2025-01-27.acacia",
     httpClient: Stripe.createFetchHttpClient(),
-  } as Stripe.StripeConfig);
+  } as unknown as Stripe.StripeConfig);
 }
 
 /**
