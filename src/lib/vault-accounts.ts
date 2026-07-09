@@ -386,9 +386,22 @@ export async function advanceHotpCounter(
   dek: CryptoKey,
   id: string,
   currentCounter: number,
+  rowCryptoVersion?: number,
 ): Promise<{ counter: number; queued: boolean }> {
   const next = Math.max(0, Math.floor(currentCounter)) + 1;
-  const { ciphertext, iv } = await encryptSecret(dek, String(next));
+  // v3 rows: bind ciphertext to (user_id | account_id). v2 rows: no AAD
+  // until the background migrator upgrades them. Resolve user only when
+  // we actually need it so tests without an auth session still pass.
+  let aad: Uint8Array | undefined;
+  if ((rowCryptoVersion ?? 2) >= 3) {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user?.id) aad = buildAccountAad(data.user.id, id);
+    } catch {
+      /* leave aad undefined; write will fall back to no-AAD */
+    }
+  }
+  const { ciphertext, iv } = await encryptSecret(dek, String(next), aad);
   const counter_ciphertext = toByteaHex(ciphertext);
   const counter_iv = toByteaHex(iv);
 
