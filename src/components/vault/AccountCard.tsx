@@ -383,6 +383,25 @@ export function AccountCard({
     setEditing(false);
   };
 
+  const submitShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = shareEmail.trim();
+    if (!email || shareBusy) return;
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      await shareAccountByEmail(account.id, email);
+      toast.success("Shared. They'll see it after they unlock their vault.");
+      setShareOpen(false);
+      setShareEmail("");
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Could not share account.");
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+
   const pressTimer = useRef<number | null>(null);
   const longPressedRef = useRef(false);
   const detailsPanelRef = useRef<HTMLDivElement | null>(null);
