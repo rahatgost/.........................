@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: Aegis Read-Only Vault API
+  version: "14.2.0"
+  description: |
+    Read-only HTTP API for third-party integrations against an Aegis vault.
+    All calls require a **personal API token** — a bearer token minted from
+    the app's Settings → Developer tab and scoped to a single vault.
+
+    ## Threat model
+
+    - Tokens are opaque, prefixed `aegis_pat_`, and rate-limited per token.
+    - The server never sees plaintext TOTP secrets. Endpoints under
+      `/v1/vault/*` return **wrapped** ciphertext exactly as it is stored;
+      decryption happens locally with the caller's vault key.
+    - Revoke a token from the same Settings tab. Revocation is immediate.
+
+    ## Base URL
+
+    `https://api.aegis-syed.lovable.app`
+
+    ## Versioning
+
+    Breaking changes ship under a new path prefix (`/v2/...`). Additive
+    changes may land inside `/v1` and are announced in the changelog.
+
+servers:
+  - url: https://api.aegis-syed.lovable.app
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Vault
+    description: Read-only access to encrypted vault entries.
+  - name: Shares
+    description: Read-only access to accounts shared with you.
+  - name: Meta
+    description: Token and account metadata.
+
+paths:
+  /v1/whoami:
+    get:
+      tags: [Meta]
+      summary: Identify the token holder
+      description: Returns the user id, token scope, and rate-limit budget.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmI"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/vault/accounts:
+    get:
+      tags: [Vault]
+      summary: List encrypted vault accounts
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+          description: Opaque pagination cursor from a previous response.
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: A page of accounts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /v1/vault/accounts/{accountId}:
+    get:
+      tags: [Vault]
+      summary: Fetch a single encrypted account
+      parameters:
+        - in: path
+          name: accountId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/shares/incoming:
+    get:
+      tags: [Shares]
+      summary: List accounts shared with the token holder
+      description: |
+        Returns sealed shares. The `sealed_secret` field is a
+        crypto_box-style envelope keyed to your published X25519 public key
+        and must be opened client-side.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncomingShare"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: aegis_pat_*
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, or revoked token.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Row not visible to this token, or does not exist.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Per-token rate limit exceeded. Retry after the `Retry-After` header.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: unauthorized
+        message:
+          type: string
+          example: Token has been revoked.
+
+    WhoAmI:
+      type: object
+      required: [user_id, token_id, scopes, rate_limit]
+      properties:
+        user_id: { type: string, format: uuid }
+        token_id: { type: string, format: uuid }
+        scopes:
+          type: array
+          items:
+            type: string
+            enum: [vault:read, shares:read]
+        rate_limit:
+          type: object
+          properties:
+            requests_per_minute: { type: integer, example: 60 }
+            remaining: { type: integer, example: 58 }
+
+    Account:
+      type: object
+      required:
+        - id
+        - issuer
+        - label
+        - otp_type
+        - algorithm
+        - digits
+        - period
+        - encrypted_secret
+        - created_at
+        - updated_at
+      properties:
+        id: { type: string, format: uuid }
+        issuer: { type: string, example: GitHub }
+        label: { type: string, example: alice@example.com }
+        otp_type:
+          type: string
+          enum: [totp, hotp, steam]
+        algorithm:
+          type: string
+          enum: [SHA1, SHA256, SHA512]
+        digits: { type: integer, example: 6 }
+        period: { type: integer, example: 30, description: TOTP step in seconds. }
+        counter:
+          type: integer
+          nullable: true
+          description: HOTP counter, when applicable.
+        encrypted_secret:
+          type: string
+          format: byte
+          description: |
+            AES-GCM ciphertext of the OTP secret, wrapped with the vault
+            key. The API never decrypts this.
+        needs_rotation:
+          type: boolean
+          description: True if the secret has been shared and later revoked.
+        tags:
+          type: array
+          items: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AccountsPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Account" }
+        next_cursor:
+          type: string
+          nullable: true
+          description: Pass as `?cursor=` to fetch the next page. Null when done.
+
+    IncomingShare:
+      type: object
+      required:
+        - id
+        - issuer
+        - label
+        - otp_type
+        - algorithm
+        - digits
+        - period
+        - sealed_secret
+        - sender_public_key
+        - created_at
+      properties:
+        id: { type: string, format: uuid }
+        issuer: { type: string }
+        label: { type: string }
+        otp_type: { type: string, enum: [totp, hotp, steam] }
+        algorithm: { type: string, enum: [SHA1, SHA256, SHA512] }
+        digits: { type: integer }
+        period: { type: integer }
+        sealed_secret:
+          type: string
+          format: byte
+          description: X25519-sealed envelope of the OTP secret.
+        sender_public_key:
+          type: string
+          format: byte
+          description: X25519 public key of the sender.
+        created_at: { type: string, format: date-time }

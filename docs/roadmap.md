@@ -292,8 +292,8 @@ encrypted, without the server ever seeing plaintext.
 - [x] Reproducible build recipe in `docs/reproducible-build.md`
 
 ### 14.2 Public API + docs `[P2]`
-- [ ] Publish OpenAPI schema for read-only vault ops (personal API token required)
-- [ ] Ship `docs/api.md` and a Postman collection
+- [x] Publish OpenAPI schema for read-only vault ops (personal API token required)
+- [x] Ship `docs/api.md` and a Postman collection
 
 ### 14.3 Self-hosted server recipe `[P2]`
 - [ ] Docker Compose stack: Postgres + migrations + lightweight edge runtime

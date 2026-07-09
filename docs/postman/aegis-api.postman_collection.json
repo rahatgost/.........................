@@ -1,0 +1,102 @@
+{
+  "info": {
+    "name": "Aegis Public API (v1)",
+    "_postman_id": "aegis-v1-read-only",
+    "description": "Read-only endpoints for the Aegis vault. Requires a personal API token minted from Settings → Developer.\n\nSee docs/api.md and docs/openapi.yaml for the full spec.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.aegis-syed.lovable.app",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "aegis_pat_replace_me",
+      "type": "string",
+      "description": "Personal API token. Mint one in Settings → Developer."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Meta",
+      "item": [
+        {
+          "name": "Who am I",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/whoami",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "whoami"]
+            },
+            "description": "Confirms the token is valid and returns the current rate-limit budget."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vault",
+      "item": [
+        {
+          "name": "List encrypted accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vault/accounts?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vault", "accounts"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Paginated list of encrypted vault entries. `encrypted_secret` is wrapped with the caller's vault key and must be decrypted client-side."
+          }
+        },
+        {
+          "name": "Get one account by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/vault/accounts/:accountId",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "vault", "accounts", ":accountId"],
+              "variable": [
+                { "key": "accountId", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shares",
+      "item": [
+        {
+          "name": "List incoming shares",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/shares/incoming",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "shares", "incoming"]
+            },
+            "description": "Sealed shares from other users. Open `sealed_secret` client-side with your X25519 private key."
+          }
+        }
+      ]
+    }
+  ]
+}
