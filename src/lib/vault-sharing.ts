@@ -114,7 +114,7 @@ export async function shareAccountByEmail(
   const recipient = await findRecipientByEmail(recipientEmail);
   if (!recipient) {
     throw new Error(
-      "No Aegis user with that email has set up sharing yet. Ask them to sign in and unlock their vault.",
+      "That email isn't ready for sharing yet. Ask them to open Aegis and unlock their vault once, then try again.",
     );
   }
   if (recipient.userId === ownerId) {
