@@ -273,12 +273,52 @@ export async function runAutoBackupNow(userId: string): Promise<void> {
     appendLog(userId, "success", `${accounts.length} account${accounts.length === 1 ? "" : "s"} backed up`);
     void pruneOldAutoBackups(userId, settings.keep);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Auto-backup failed.";
+    const raw = err instanceof Error ? err.message : String(err ?? "");
+    const msg = friendlyBackupError(raw);
     writeSettings(userId, { lastError: msg });
     appendLog(userId, "error", msg);
   } finally {
     running.delete(userId);
   }
+}
+
+/**
+ * Translate raw backend/storage errors into short, human-readable strings.
+ * Covers DB quota triggers (vault account cap, per-minute rate limit,
+ * family cap), storage RLS/quota denials, oversized payloads, and offline.
+ */
+export function friendlyBackupError(raw: string): string {
+  const m = (raw || "").toLowerCase();
+  // DB triggers (Postgres RAISE EXCEPTION surfaces the message verbatim)
+  if (m.includes("vault account limit reached")) {
+    return "You've hit your plan's account limit. Upgrade to Pro to back up more accounts.";
+  }
+  if (m.includes("rate limit") && m.includes("vault accounts")) {
+    return "Too many vault changes in a short window — auto-backup will retry shortly.";
+  }
+  if (m.includes("family is full")) {
+    return "Family is full (6 members max).";
+  }
+  // Storage / auth
+  if (m.includes("row-level security") || m.includes("row level security") || m.includes("not authorized")) {
+    return "Backend rejected the backup (permission denied). Try signing out and back in.";
+  }
+  if (m.includes("payload too large") || m.includes("413")) {
+    return "Backup is too large for your plan's storage limit.";
+  }
+  if (m.includes("quota") || m.includes("storage limit") || m.includes("exceeded")) {
+    return "Cloud backup storage quota reached. Delete older backups or upgrade your plan.";
+  }
+  if (m.includes("already exists") || m.includes("duplicate")) {
+    return "A backup with this name already exists — will retry on the next cycle.";
+  }
+  if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("network error")) {
+    return "Network unavailable — auto-backup will retry when you're back online.";
+  }
+  if (m.includes("jwt") || m.includes("unauthorized") || m.includes("401")) {
+    return "Session expired — sign in again to resume auto-backup.";
+  }
+  return raw || "Auto-backup failed.";
 }
 
 
