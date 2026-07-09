@@ -81,6 +81,8 @@ import {
 } from "@/components/aegis/typography";
 import { LargeTitle, SectionLabel } from "@/components/aegis/settings";
 import { InstallPrompt } from "@/components/aegis/InstallPrompt";
+import { UpgradePrompt } from "@/components/aegis/upgrade-prompt";
+import { usePlan } from "@/hooks/use-plan";
 import { IncomingSharesSection } from "@/components/aegis/sharing-section";
 import { useLingui } from "@lingui/react";
 
@@ -127,6 +129,7 @@ function VaultPage() {
 
 
   useActivityKeepAlive();
+  const plan = usePlan();
 
   const [accounts, setAccounts] = useState<DecryptedAccount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -556,6 +559,21 @@ function VaultPage() {
       />
 
       <InstallPrompt />
+
+      {plan.isFree && accounts && accounts.length >= 20 && (
+        <div className="mb-2 mt-1">
+          <UpgradePrompt
+            title={
+              accounts.length >= 25
+                ? `You've hit the Free limit (${accounts.length}/25)`
+                : `${accounts.length}/25 accounts used`
+            }
+            body="Upgrade to Pro for 500 accounts, encrypted cloud backup, and breach monitoring."
+            tier="Pro"
+          />
+        </div>
+      )}
+
 
       {(!online || source === "cache") && accounts && (
         <div

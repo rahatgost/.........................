@@ -40,6 +40,8 @@ import {
   soft,
 } from "@/components/aegis/chrome";
 import { LargeTitle, SectionLabel, SettingsGroup, SettingsRow } from "@/components/aegis/settings";
+import { PlanComparisonSheet } from "@/components/aegis/plan-comparison-sheet";
+import { Eye } from "lucide-react";
 import { getThemePref, setThemePref, type ThemePref } from "@/lib/theme";
 import {
   SUPPORTED_LOCALES,
@@ -100,6 +102,7 @@ function ProfilePage() {
   });
   const [planBusy, setPlanBusy] = useState<null | "pro" | "family" | "portal">(null);
   const [planSheet, setPlanSheet] = useState(false);
+  const [compareSheet, setCompareSheet] = useState(false);
 
   const activePaidTier = sub && sub.tier !== "free" && ["active", "trialing"].includes(sub.status);
   const planLabel = !sub
@@ -615,10 +618,20 @@ function ProfilePage() {
             value={planLabel}
             description={
               activePaidTier
-                ? t("profile.plan.paid.description", "Up to 500 accounts. Family sharing enabled.")
-                : t("profile.plan.free.description", "Free — up to 25 accounts. Upgrade for more.")
+                ? t("profile.plan.paid.description", "500 accounts · auto backup · breach monitoring.")
+                : t("profile.plan.free.description", "Free — 25 accounts. Upgrade for more.")
             }
             onClick={() => setPlanSheet(true)}
+            chevron
+          />
+          <SettingsRow
+            icon={<Eye className="h-4 w-4" strokeWidth={1.8} />}
+            title={t("profile.plan.compare", "Compare plans")}
+            description={t(
+              "profile.plan.compare.description",
+              "See what's in Free, Pro, and Family side-by-side.",
+            )}
+            onClick={() => setCompareSheet(true)}
             chevron
           />
         </SettingsGroup>
@@ -706,6 +719,7 @@ function ProfilePage() {
           />
         )}
       </AnimatePresence>
+      <PlanComparisonSheet open={compareSheet} onClose={() => setCompareSheet(false)} />
     </>
   );
 }

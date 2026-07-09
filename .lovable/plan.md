@@ -1,82 +1,116 @@
-## Phase 8.3 — Localization
+# Free / Pro / Family — feature separation
 
-Goal: ship the localization infrastructure and the user-facing picker so translations can land incrementally. Aegis becomes ready to serve `en, es, pt-BR, fr, de, ja, hi, bn` with a clean workflow for future PRs.
+Aegis er 3ta tier ache (`free`, `pro`, `family`) but ekhono kono real gate nei — sob feature sobar jonno open. Ei plan e ekta clean matrix define kori, ekta central `usePlan()` hook banai, ar tarpor phase-wise 3-4 ta core feature gate kori.
 
-### 1. Dependencies
+## 1. Feature matrix (final)
 
-Add via `bun add`:
+| Feature | Free | Pro | Family |
+|---|---|---|---|
+| **Accounts (TOTP entries)** | 25 max | Unlimited | Unlimited |
+| **Devices synced** | 2 | Unlimited | Unlimited |
+| **Encrypted cloud backup** | Manual export only | Auto + 30-day history | Auto + 30-day history |
+| **Vault health scan** | Basic (weak/duplicate) | + Breach monitoring (HIBP) | + Breach monitoring |
+| **Browser extension** | Manual copy code | Autofill + auto-submit | Autofill + auto-submit |
+| **Tags** | 5 custom | Unlimited | Unlimited |
+| **Push approval history** | Last 7 days | Last 90 days | Last 90 days |
+| **Family members** | — | — | Up to 6 |
+| **Shared household vault** | — | — | ✓ |
+| **Emergency access** | — | — | ✓ |
 
-- Runtime: `@lingui/core`, `@lingui/react`, `@lingui/detect-locale`
-- Dev: `@lingui/cli`, `@lingui/vite-plugin`, `@lingui/babel-plugin-lingui-macro`, `babel-plugin-macros`
+Non-gated (always free): core TOTP generation, offline unlock, biometrics, master passphrase, recovery kit, manual export, dark mode, i18n.
 
-### 2. Config files
+## 2. Central plan helper
 
-- `lingui.config.ts` — locales list, `sourceLocale: "en"`, catalogs in `src/locales/{locale}/messages.po`, format `po`.
-- `vite.config.ts` — register `@lingui/vite-plugin` alongside the existing plugins.
-- `package.json` scripts: `"i18n:extract": "lingui extract"`, `"i18n:compile": "lingui compile"`.
+New file `src/lib/plan.ts`:
 
-### 3. Runtime wiring
+- Types: `PlanTier = "free" | "pro" | "family"`, `PlanFeature` union of all gated feature keys.
+- `PLAN_LIMITS` constant: numeric caps per tier (`maxAccounts`, `maxDevices`, `maxTags`, `pushHistoryDays`).
+- `hasFeature(tier, feature)` — boolean check.
+- `getLimit(tier, key)` — numeric limit.
+- `TIER_LABEL`, `TIER_ORDER` for UI.
 
-- `src/lib/i18n.ts` — `SUPPORTED_LOCALES` array with `{code, label, nativeLabel}` for the eight locales, `LOCALE_STORAGE_KEY = "aegis:locale"`, `getLocalePref()`, `setLocalePref()`, `activateLocale(code)` calling `i18n.load` + `i18n.activate`, and `detectInitialLocale()` (localStorage → `navigator.language` → `en`).
-- `src/routes/__root.tsx` — wrap the app in `<I18nProvider i18n={i18n}>`, activate detected locale before hydration (mirror of theme boot).
-- Auth sync in `__root.tsx`: on session, pull `profiles.locale` and, if present, re-activate + persist.
+New hook `src/hooks/use-plan.ts`:
 
-### 4. Catalogs
+- Uses TanStack Query + `getMySubscription` server fn (already exists).
+- Returns `{ tier, isPro, isFamily, hasFeature, getLimit, loading }`.
+- Sensible default: treat as `free` while loading so gates fail closed.
 
-- Create `src/locales/{en,es,pt-BR,fr,de,ja,hi,bn}/messages.po` — empty scaffolds committed so `lingui compile` works out of the box; also `messages.ts` compiled outputs are gitignored and regenerated.
-- Seed the `en` catalog with the strings from step 6 so the app renders identically today.
+## 3. Upgrade prompt component
 
-### 5. Database
+`src/components/aegis/upgrade-prompt.tsx` — small reusable card/sheet with:
+- Icon + feature name
+- "This is a Pro feature" copy
+- CTA button → opens the existing plan sheet on Profile (or navigates `/profile?upgrade=pro`).
 
-Migration `add profiles.locale`:
+Used inline anywhere a Free user hits a gate.
 
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS locale text
-  CHECK (locale IN ('en','es','pt-BR','fr','de','ja','hi','bn'));
-```
+## 4. Enforcement — phase 1 (this PR)
 
-No new grants/policies (column on existing table already covered by RLS).
+Gate the 4 highest-value features:
 
-### 6. Wrap user-facing strings (initial pass)
+**a. Account cap (25 for Free)**
+- `src/routes/_authenticated/_locked/vault_.new.tsx` and `vault_.import.tsx`: before saving, check `accounts.length >= getLimit(tier, "maxAccounts")`. If exceeded, show `<UpgradePrompt feature="unlimited-accounts" />` instead of the save button.
+- Vault tab: show a subtle "24 / 25 accounts" counter for Free users approaching cap.
 
-Convert strings to Lingui macros in the highest-traffic surfaces so the extractor produces a real catalog:
+**b. Auto cloud backup (Pro+)**
+- `src/lib/vault-autobackup.ts` and `vault-cloud-backup.ts`: wrap the scheduled backup trigger — if `!isPro`, skip auto and only allow manual export.
+- Settings backup toggle in `src/components/aegis/settings.tsx`: show as Pro-locked with upgrade prompt for Free.
 
-- `src/routes/auth.tsx`, `src/routes/auth.callback.tsx`, `src/routes/auth.reset-password.tsx`
-- `src/components/aegis/settings.tsx` (Profile → Appearance rows, Sign out, etc.)
-- `src/routes/_authenticated/_tabs/{profile,security,vault}.tsx` visible labels, section titles, empty states
-- `src/routes/_authenticated/_locked/vault_.{new,import,recovery}.tsx` primary CTAs, field labels, notices
-- `src/components/aegis/BottomTabs.tsx` tab labels
-- `src/components/onboarding/Onboarding.tsx` step copy
+**c. Breach monitoring (Pro+)**
+- `src/components/vault/ScanTab.tsx` / `vault-health.tsx`: Free sees weak/duplicate; the HIBP breach section renders `<UpgradePrompt feature="breach-monitoring" />` for Free.
 
-Deep technical strings (dev/tokens, error stack helpers, log-only text) stay in English; blog route stays English (SEO route).
+**d. Family members (Family only)**
+- `src/routes/_authenticated/family.tsx`: if `!isFamily`, render an upgrade card instead of the invite UI. Already partially in place — formalize with `usePlan()`.
 
-### 7. Locale picker (Profile → Language)
+## 5. Server-side enforcement
 
-- New section in `src/components/aegis/settings.tsx` mirroring the Appearance section: rows for each of the eight locales (native label + English label), active checkmark, tap to switch.
-- On select: `activateLocale(code)` → `setLocalePref(code)` → upsert `profiles.locale`.
+Client gates are UX; add a lightweight server check for account cap in the vault write path so a modded client can't bypass:
 
-### 8. String freeze policy
+- New server fn `checkAccountQuota` (or inline in existing vault sync fn) — reads user's tier from `subscriptions`, counts vault entries, rejects with a clear error if over cap.
+- Backup + breach are already server-observable via subscription tier if we later add server-side scheduling; for now the client gate is enough (they're read-only reveals).
 
-- `docs/i18n.md` — new short doc: any PR touching visible copy runs `bun run i18n:extract`, commits the `.po` diff; CI check to be added in Phase 8.4.
-- Mention in `AGENTS.md` under a new "Localization" bullet.
+## 6. Profile UI polish
 
-### 9. Verification
+- Current profile plan row shows "25 accounts / Family sharing" — replace copy with the real matrix.
+- Add a "See what's in Pro" link that opens a full comparison sheet showing the table above.
+- New file `src/components/aegis/plan-comparison-sheet.tsx`.
 
-- `bun run i18n:extract` produces a non-empty `en` catalog with the strings from step 6.
-- `bun run i18n:compile` succeeds for all eight locales.
-- Manual: switch locale in Profile → picker persists across reload, `profiles.locale` updated. English fallback works for locales with empty catalogs.
-- Typecheck + build clean.
+## 7. Onboarding step alignment
 
-### Non-goals
+Update the just-added `StepPro` copy in `src/components/onboarding/Onboarding.tsx` to match the exact matrix (currently lists 5 features — align wording with `hasFeature` keys so nothing drifts).
 
-- Actual translated copy for es/pt-BR/fr/de/ja/hi/bn (empty catalogs, English fallback until translators land copy).
-- Right-to-left support (no RTL locales in the initial eight).
-- CI extractor check — deferred to Phase 8.4 alongside axe-core.
-- Localizing the marketing home page and blog route (SEO English-only for now).
+## 8. Not in this PR (deferred)
 
-### Technical notes
+- Actual HIBP integration (currently the "breach monitoring" section is a placeholder — gate the UI now, wire the API in a follow-up).
+- Browser extension autofill gate — lives in the extension repo, needs its own release.
+- Emergency access + shared household vault — deferred to a Family v2 phase.
+- Server-side per-request quota middleware — phase 1 uses point checks; phase 2 will centralize.
 
-- Lingui macros require the Vite plugin; without it, `<Trans>` and `t\`\`` render literally. The plugin transforms at build time — no runtime cost.
-- `@lingui/detect-locale` handles `navigator.languages` fallback chain; we only accept it if it matches a supported locale, else `en`.
-- Pre-hydration locale activation is synchronous (catalog is bundled), so no flash of untranslated content.
+## Technical notes
+
+- All limits centralized in `PLAN_LIMITS` so future tier tweaks are one-line changes.
+- `usePlan()` cached via TanStack Query (5min stale) — no per-render fetch.
+- `hasFeature()` fails closed on unknown/loading tier — never accidentally grants Pro.
+- Upgrade prompt reuses existing `planSheet` on Profile, no duplicate paywall UI.
+- No changes to `subscriptions` table schema — the tier column already drives everything.
+
+## Files touched
+
+New:
+- `src/lib/plan.ts`
+- `src/hooks/use-plan.ts`
+- `src/components/aegis/upgrade-prompt.tsx`
+- `src/components/aegis/plan-comparison-sheet.tsx`
+
+Edited:
+- `src/routes/_authenticated/_locked/vault_.new.tsx`
+- `src/routes/_authenticated/_locked/vault_.import.tsx`
+- `src/routes/_authenticated/_tabs/vault.tsx` (counter)
+- `src/routes/_authenticated/_tabs/profile.tsx` (comparison sheet link + copy)
+- `src/routes/_authenticated/family.tsx` (formal gate)
+- `src/lib/vault-autobackup.ts`
+- `src/lib/vault-cloud-backup.ts`
+- `src/components/aegis/settings.tsx` (backup toggle gate)
+- `src/components/vault/ScanTab.tsx` (breach section gate)
+- `src/components/onboarding/Onboarding.tsx` (copy align)
+- `src/lib/subscriptions.functions.ts` (add `checkAccountQuota`)
