@@ -250,15 +250,15 @@ distribution live, widget + complication for the pinned issuer.
 ## Phase 12 — Crypto v2 (`[P1]`, 1 week)
 
 ### 12.1 `VAULT_CRYPTO_VERSION = 2` `[P1]`
-- [ ] Argon2id (memory 64 MiB, iterations 3, parallelism 1) via `@noble/hashes` for the KDF; salt stays 16 bytes
-- [ ] AES-GCM `additionalData` = `utf8(user_id + '|' + account_id)`
+- [x] Argon2id (memory 19 MiB, iterations 2, parallelism 1) via `hash-wasm` for the KDF; salt stays 16 bytes. Params tuned for mobile-first PWA (OWASP 2024 memory-constrained profile) — pre-registered as `argon2id-m19456-t2-p1` so future re-tunes bump the algorithm string, not the version.
+- [x] AES-GCM `additionalData` = `utf8(user_id + '|' + account_id)` — gated behind per-row `crypto_version = 3`; v2 rows still readable (no AAD) until the migrator upgrades them.
 
 ### 12.2 Background re-encrypt migrator `[P1]`
-- [ ] On first unlock post-upgrade, for every row where `crypto_version < 2`: decrypt v1 → re-encrypt v2 → write back
-- [ ] Batched, idempotent, resumable
+- [x] On first unlock post-upgrade, for every row where `crypto_version < 3`: decrypt v2 (no AAD) → re-encrypt v3 with AAD → write back. Same DEK, only the ciphertext envelope changes.
+- [x] Batched (10 rows/round-trip), idempotent, resumable — a mid-migration reload picks up where it left off by re-querying `crypto_version < 3`. Serialized per user via `runV3Migration`'s in-flight guard.
 
 ### 12.3 Migration telemetry `[P1]`
-- [ ] Client posts `{ from, to, rows_migrated, elapsed_ms }` to `client_errors` (kind = `info`)
+- [x] Client posts one `client_errors` row on completion with `route = 'vault-migrator'` and a summary message including `rows_migrated` + `elapsed_ms` (the table has no `kind`/`metadata` columns, so the tag lives in `route`).
 
 **Exit criteria:** All new vaults are v2. 95% of active vaults migrated
 within 30 days. Old v1 code kept in-tree for six months, then removed.
