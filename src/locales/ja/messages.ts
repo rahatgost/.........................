@@ -80,4 +80,18 @@ export const messages: Record<string, string> = {
   "common.save": "保存",
   "common.close": "閉じる",
   "common.retry": "再試行",
+
+  "profile.section.plan": "プラン",
+  "profile.plan": "プラン",
+  "profile.plan.free.description": "無料 — 25 アカウント。さらに使うにはアップグレード。",
+  "profile.plan.paid.description": "500 アカウント · 自動バックアップ · 漏洩監視。",
+  "profile.plan.compare": "プランを比較",
+  "profile.plan.compare.description": "Free、Pro、Family を並べて比較。",
+  "profile.section.sharing": "共有",
+  "profile.family": "ファミリー",
+  "profile.family.description": "最大 6 人の家族と Aegis のコードを共有。",
+
+  "security.autoBackup.proOnly": "Pro — アップグレードで有効化",
+
+  "vault.card.share": "共有",
 };
