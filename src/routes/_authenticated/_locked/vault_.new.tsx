@@ -8,11 +8,14 @@ import {
   addAccount,
   isValidBase32Secret,
   parseOtpauthUri,
+  readCachedAccountsOnly,
   type Algorithm,
   type OtpType,
 } from "@/lib/vault-accounts";
 import { TagInput } from "@/components/vault/tags";
 import { friendlyVaultSaveError } from "@/lib/friendly-errors";
+import { UpgradePrompt } from "@/components/aegis/upgrade-prompt";
+import { usePlan } from "@/hooks/use-plan";
 import { ScanTab } from "@/components/vault/ScanTab";
 import {
   ArrowLeft,
