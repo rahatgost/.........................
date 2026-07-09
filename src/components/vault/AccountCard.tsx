@@ -479,7 +479,12 @@ export function AccountCard({
     }
     setHotpBusy(true);
     try {
-      const { counter, queued } = await advanceHotpCounter(key, account.id, hotpCounter);
+      const { counter, queued } = await advanceHotpCounter(
+        key,
+        account.id,
+        hotpCounter,
+        account.crypto_version,
+      );
       setHotpCounter(counter);
       if (typeof navigator.vibrate === "function") navigator.vibrate(6);
       if (queued) toast.message("Next code · will sync when online");
