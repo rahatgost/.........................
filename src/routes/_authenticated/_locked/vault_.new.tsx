@@ -8,11 +8,14 @@ import {
   addAccount,
   isValidBase32Secret,
   parseOtpauthUri,
+  readCachedAccountsOnly,
   type Algorithm,
   type OtpType,
 } from "@/lib/vault-accounts";
 import { TagInput } from "@/components/vault/tags";
 import { friendlyVaultSaveError } from "@/lib/friendly-errors";
+import { UpgradePrompt } from "@/components/aegis/upgrade-prompt";
+import { usePlan } from "@/hooks/use-plan";
 import { ScanTab } from "@/components/vault/ScanTab";
 import {
   ArrowLeft,
@@ -76,6 +79,34 @@ function NewAccountPage() {
   const online = useOnlineStatus();
   // Latch so a deep-linked `?uri=` is consumed exactly once per navigation.
   const handledIncomingRef = useRef(false);
+
+  // Preflight cap check — read cached account count and compare against the
+  // active plan's `maxAccounts`. Prevents Free users from scanning a QR only
+  // to hit the DB quota trigger at save time.
+  const plan = usePlan();
+  const [accountCount, setAccountCount] = useState<number | null>(null);
+  useEffect(() => {
+    const key = getVaultKey();
+    if (!key) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const cached = await readCachedAccountsOnly(key, user.id);
+        if (!cancelled) setAccountCount(cached?.length ?? 0);
+      } catch {
+        if (!cancelled) setAccountCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+  const cap = plan.getLimit("maxAccounts");
+  const atCap =
+    !plan.loading &&
+    accountCount !== null &&
+    Number.isFinite(cap) &&
+    accountCount >= cap;
 
   const save = useCallback(
     async (input: {
@@ -183,83 +214,100 @@ function NewAccountPage() {
         {/* Compact hero */}
         <div className="flex flex-col gap-1.5 pt-2 pb-4">
           <h1 style={typeDisplay}>
-            {tab === "scan" ? t("add.hero.scan", "Scan a code") : t("add.hero.manual", "Enter by hand")}
+            {atCap
+              ? "You're at the Free plan limit"
+              : tab === "scan"
+                ? t("add.hero.scan", "Scan a code")
+                : t("add.hero.manual", "Enter by hand")}
           </h1>
           <p style={typeBody}>
-            {tab === "scan"
-              ? "Point at the QR shown by any service. We'll do the rest."
-              : "Type the secret shown as text on the service's setup screen."}
+            {atCap
+              ? `You've saved ${accountCount} of ${cap} accounts. Upgrade to Pro to add more.`
+              : tab === "scan"
+                ? "Point at the QR shown by any service. We'll do the rest."
+                : "Type the secret shown as text on the service's setup screen."}
           </p>
 
         </div>
 
-        <SegmentedTabs tab={tab} setTab={setTab} />
-
-        <div className="flex items-center justify-between pt-3">
-          <span className="text-[11.5px]" style={{ color: MUTED }}>
-            Coming from another app?
-          </span>
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/vault/import" })}
-            className="rounded-full px-3 py-1.5 text-[12px] transition-colors"
-            style={{
-              background: CREAM_SOFT,
-              border: `1px solid ${BORDER}`,
-              color: CHARCOAL,
-              fontWeight: 600,
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
-            }}
-          >
-            Bulk import →
-          </button>
-        </div>
-
-        {!online && (
-          <div
-            className="mt-3 flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px]"
-            style={{
-              background: CREAM_SOFT,
-              border: `1px solid ${BORDER}`,
-              color: MUTED,
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
-            }}
-          >
-            <WifiOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
-            <span>You're offline — new codes will sync automatically when you reconnect.</span>
+        {atCap ? (
+          <div className="pt-2">
+            <UpgradePrompt
+              title="Unlimited accounts with Pro"
+              body="Pro lifts the cap from 25 to 500 accounts, adds encrypted cloud backup and breach monitoring."
+              tier="Pro"
+            />
           </div>
+        ) : (
+          <>
+            <SegmentedTabs tab={tab} setTab={setTab} />
+
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-[11.5px]" style={{ color: MUTED }}>
+                Coming from another app?
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/vault/import" })}
+                className="rounded-full px-3 py-1.5 text-[12px] transition-colors"
+                style={{
+                  background: CREAM_SOFT,
+                  border: `1px solid ${BORDER}`,
+                  color: CHARCOAL,
+                  fontWeight: 600,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+                }}
+              >
+                Bulk import →
+              </button>
+            </div>
+
+            {!online && (
+              <div
+                className="mt-3 flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px]"
+                style={{
+                  background: CREAM_SOFT,
+                  border: `1px solid ${BORDER}`,
+                  color: MUTED,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+                }}
+              >
+                <WifiOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+                <span>You're offline — new codes will sync automatically when you reconnect.</span>
+              </div>
+            )}
+
+            {notice && (
+              <div className="pt-3">
+                <Notice kind={notice.kind}>{notice.text}</Notice>
+              </div>
+            )}
+
+            <div className="pt-4">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={soft}
+                >
+                  {tab === "scan" ? (
+                    <ScanTab
+                      key={scanAttempt}
+                      onDetected={handleQrDetected}
+                      onError={handleScanError}
+                      saving={saving}
+                      switchToManual={switchToManual}
+                    />
+                  ) : (
+                    <ManualTab onSubmit={save} saving={saving} />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </>
         )}
-
-        {notice && (
-          <div className="pt-3">
-            <Notice kind={notice.kind}>{notice.text}</Notice>
-          </div>
-        )}
-
-
-        <div className="pt-4">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={soft}
-            >
-              {tab === "scan" ? (
-                <ScanTab
-                  key={scanAttempt}
-                  onDetected={handleQrDetected}
-                  onError={handleScanError}
-                  saving={saving}
-                  switchToManual={switchToManual}
-                />
-              ) : (
-                <ManualTab onSubmit={save} saving={saving} />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
       </div>
       <BottomTabs />
     </AegisScreen>
