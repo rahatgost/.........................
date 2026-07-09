@@ -1219,9 +1219,10 @@ export default function Onboarding({ onComplete }: { onComplete?: () => void } =
               {step === 1 && <StepFeatures next={goNext} />}
               {step === 2 && <StepImport next={goNext} />}
               {step === 3 && <StepBackup next={goNext} />}
-              {step === 4 && <StepNotifications next={goNext} />}
-              {step === 5 && <StepBiometrics next={goNext} />}
-              {step === 6 && <StepDone next={onComplete ?? restart} />}
+              {step === 4 && <StepPro next={goNext} />}
+              {step === 5 && <StepNotifications next={goNext} />}
+              {step === 6 && <StepBiometrics next={goNext} />}
+              {step === 7 && <StepDone next={onComplete ?? restart} />}
             </motion.div>
           </AnimatePresence>
         </div>
