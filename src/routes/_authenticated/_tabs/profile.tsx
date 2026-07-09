@@ -1091,6 +1091,11 @@ function AvatarActionSheet({
   onRemove: () => void;
   onClose: () => void;
 }) {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string) => {
+    const msg = i18n._(id);
+    return msg === id ? fallback : msg;
+  };
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
