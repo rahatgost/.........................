@@ -601,6 +601,28 @@ function ProfilePage() {
           />
         </SettingsGroup>
 
+        <SectionLabel>{t("profile.section.plan", "Plan")}</SectionLabel>
+        <SettingsGroup>
+          <SettingsRow
+            icon={
+              activePaidTier ? (
+                <Sparkles className="h-4 w-4" strokeWidth={1.8} />
+              ) : (
+                <CreditCard className="h-4 w-4" strokeWidth={1.8} />
+              )
+            }
+            title={t("profile.plan", "Plan")}
+            value={planLabel}
+            description={
+              activePaidTier
+                ? t("profile.plan.paid.description", "Up to 500 accounts. Family sharing enabled.")
+                : t("profile.plan.free.description", "Free — up to 25 accounts. Upgrade for more.")
+            }
+            onClick={() => setPlanSheet(true)}
+            chevron
+          />
+        </SettingsGroup>
+
         <SectionLabel>{t("profile.section.sharing", "Sharing")}</SectionLabel>
         <SettingsGroup>
           <SettingsRow
