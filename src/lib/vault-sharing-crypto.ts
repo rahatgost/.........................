@@ -94,15 +94,20 @@ async function persistNewUserKeys(
     bytesToBase64(keys.ed25519Private),
     privateKeyAad(userId, "ed25519"),
   );
-  const { error } = await supabase.from("user_public_keys").insert({
-    user_id: userId,
-    x25519_public_key: toByteaHex(keys.x25519Public),
-    ed25519_public_key: toByteaHex(keys.ed25519Public),
-    x25519_private_wrapped: toByteaHex(wrappedX.ciphertext),
-    x25519_private_wrapped_iv: toByteaHex(wrappedX.iv),
-    ed25519_private_wrapped: toByteaHex(wrappedE.ciphertext),
-    ed25519_private_wrapped_iv: toByteaHex(wrappedE.iv),
-  });
+  const { error } = await supabase
+    .from("user_public_keys")
+    .upsert(
+      {
+        user_id: userId,
+        x25519_public_key: toByteaHex(keys.x25519Public),
+        ed25519_public_key: toByteaHex(keys.ed25519Public),
+        x25519_private_wrapped: toByteaHex(wrappedX.ciphertext),
+        x25519_private_wrapped_iv: toByteaHex(wrappedX.iv),
+        ed25519_private_wrapped: toByteaHex(wrappedE.ciphertext),
+        ed25519_private_wrapped_iv: toByteaHex(wrappedE.iv),
+      },
+      { onConflict: "user_id" },
+    );
   if (error) throw error;
 }
 
@@ -131,24 +136,31 @@ export async function ensureUserKeys(
     await persistNewUserKeys(userId, dek, keys);
     return keys;
   }
-  const xPrivB64 = await decryptSecret(
-    dek,
-    toBytes(data.x25519_private_wrapped),
-    toBytes(data.x25519_private_wrapped_iv),
-    privateKeyAad(userId, "x25519"),
-  );
-  const edPrivB64 = await decryptSecret(
-    dek,
-    toBytes(data.ed25519_private_wrapped),
-    toBytes(data.ed25519_private_wrapped_iv),
-    privateKeyAad(userId, "ed25519"),
-  );
-  return {
-    x25519Public: toBytes(data.x25519_public_key),
-    x25519Private: base64ToBytes(xPrivB64),
-    ed25519Public: toBytes(data.ed25519_public_key),
-    ed25519Private: base64ToBytes(edPrivB64),
-  };
+  try {
+    const xPrivB64 = await decryptSecret(
+      dek,
+      toBytes(data.x25519_private_wrapped),
+      toBytes(data.x25519_private_wrapped_iv),
+      privateKeyAad(userId, "x25519"),
+    );
+    const edPrivB64 = await decryptSecret(
+      dek,
+      toBytes(data.ed25519_private_wrapped),
+      toBytes(data.ed25519_private_wrapped_iv),
+      privateKeyAad(userId, "ed25519"),
+    );
+    return {
+      x25519Public: toBytes(data.x25519_public_key),
+      x25519Private: base64ToBytes(xPrivB64),
+      ed25519Public: toBytes(data.ed25519_public_key),
+      ed25519Private: base64ToBytes(edPrivB64),
+    };
+  } catch (err) {
+    console.warn("[vault-sharing] replacing stale sharing keys", err);
+    const keys = generateUserKeys();
+    await persistNewUserKeys(userId, dek, keys);
+    return keys;
+  }
 }
 
 /* ---------------- sealed-box style seal / open ---------------- */
