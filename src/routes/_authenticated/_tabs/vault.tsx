@@ -81,6 +81,8 @@ import {
 } from "@/components/aegis/typography";
 import { LargeTitle, SectionLabel } from "@/components/aegis/settings";
 import { InstallPrompt } from "@/components/aegis/InstallPrompt";
+import { UpgradePrompt } from "@/components/aegis/upgrade-prompt";
+import { usePlan } from "@/hooks/use-plan";
 import { IncomingSharesSection } from "@/components/aegis/sharing-section";
 import { useLingui } from "@lingui/react";
 
