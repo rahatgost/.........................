@@ -132,7 +132,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "preload",
         as: "style",
         href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap",
-        fetchpriority: "high",
       },
       {
         rel: "stylesheet",
@@ -141,8 +140,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Playfair+Display:wght@600;700&display=swap",
-        media: "print",
-        onLoad: "this.media='all'",
       },
     ],
     scripts: [
