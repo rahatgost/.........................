@@ -80,6 +80,34 @@ function NewAccountPage() {
   // Latch so a deep-linked `?uri=` is consumed exactly once per navigation.
   const handledIncomingRef = useRef(false);
 
+  // Preflight cap check — read cached account count and compare against the
+  // active plan's `maxAccounts`. Prevents Free users from scanning a QR only
+  // to hit the DB quota trigger at save time.
+  const plan = usePlan();
+  const [accountCount, setAccountCount] = useState<number | null>(null);
+  useEffect(() => {
+    const key = getVaultKey();
+    if (!key) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const cached = await readCachedAccountsOnly(key, user.id);
+        if (!cancelled) setAccountCount(cached?.length ?? 0);
+      } catch {
+        if (!cancelled) setAccountCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+  const cap = plan.getLimit("maxAccounts");
+  const atCap =
+    !plan.loading &&
+    accountCount !== null &&
+    Number.isFinite(cap) &&
+    accountCount >= cap;
+
   const save = useCallback(
     async (input: {
       issuer: string;
