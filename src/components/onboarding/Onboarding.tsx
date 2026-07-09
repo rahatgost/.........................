@@ -16,6 +16,11 @@ import {
   ChevronLeft,
   Vibrate,
   VibrateOff,
+  Sparkles,
+  Infinity as InfinityIcon,
+  ShieldAlert,
+  Users,
+  Chrome,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
