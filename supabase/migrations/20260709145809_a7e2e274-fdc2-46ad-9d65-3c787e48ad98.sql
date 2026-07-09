@@ -1,0 +1,1 @@
+CREATE POLICY "Admin can view own family" ON public.families FOR SELECT TO authenticated USING (admin_user_id = auth.uid());
