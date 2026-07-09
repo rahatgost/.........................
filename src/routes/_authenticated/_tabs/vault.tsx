@@ -129,6 +129,7 @@ function VaultPage() {
 
 
   useActivityKeepAlive();
+  const plan = usePlan();
 
   const [accounts, setAccounts] = useState<DecryptedAccount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
