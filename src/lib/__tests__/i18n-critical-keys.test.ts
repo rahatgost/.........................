@@ -38,6 +38,9 @@ const CRITICAL_FILES = [
   "components/vault/AccountCard.tsx",
   "routes/_authenticated/_tabs/vault.tsx",
   "routes/_authenticated/_tabs/profile.tsx",
+  "routes/auth.tsx",
+  "routes/auth.reset-password.tsx",
+  "routes/auth.callback.tsx",
 ];
 
 const CALL_PATTERNS: RegExp[] = [
