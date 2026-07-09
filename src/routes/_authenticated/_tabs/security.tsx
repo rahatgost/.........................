@@ -336,8 +336,21 @@ function SecurityPage() {
           <SettingsRow
             icon={<CalendarClock className="h-4 w-4" strokeWidth={1.8} />}
             title={t("security.autoBackup", "Scheduled auto-backup")}
-            value={autoBackupSummary(autoBackup)}
-            onClick={() => setAutoBackupOpen(true)}
+            value={
+              canAutoBackup
+                ? autoBackupSummary(autoBackup)
+                : t("security.autoBackup.proOnly", "Pro — upgrade to enable")
+            }
+            onClick={() => {
+              if (canAutoBackup) {
+                setAutoBackupOpen(true);
+              } else {
+                toast.info("Scheduled auto-backup is a Pro feature", {
+                  description: "Upgrade to Pro or Family to enable daily encrypted backups.",
+                });
+                void navigate({ to: "/profile", hash: "plan" });
+              }
+            }}
             chevron
           />
 
