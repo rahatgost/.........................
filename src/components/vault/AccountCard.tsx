@@ -1439,6 +1439,23 @@ export function AccountCard({
                           </motion.button>
                           <motion.button
                             whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              setShareError(null);
+                              setShareOpen(true);
+                            }}
+                            className="flex items-center justify-center gap-2 rounded-[14px] px-3 py-3 text-[13px]"
+                            style={{
+                              background: CREAM_SOFT,
+                              color: CHARCOAL,
+                              border: `1px solid ${BORDER}`,
+                              fontWeight: 600,
+                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                            }}
+                          >
+                            <Share2 className="h-4 w-4" strokeWidth={1.9} />
+                            {t("vault.card.share", "Share")}
+                          <motion.button
+                            whileTap={{ scale: 0.98 }}
                             onClick={openDelete}
                             disabled={!onDelete}
                             className="flex items-center justify-center gap-2 rounded-[14px] px-3 py-3 text-[13px] disabled:opacity-50"
