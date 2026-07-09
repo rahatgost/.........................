@@ -12,6 +12,7 @@ import {
   X,
   ShieldCheck,
 } from "lucide-react";
+import { useLingui } from "@lingui/react";
 
 import { BORDER, CHARCOAL, CREAM_SOFT, MUTED, soft } from "@/components/aegis/chrome";
 import { SettingsGroup, SettingsRow } from "@/components/aegis/settings";
@@ -38,17 +39,28 @@ import {
  * so the outcome is unambiguous.
  */
 
-function formatWhen(iso: string): string {
-  const d = new Date(iso);
-  const diffMs = Date.now() - d.getTime();
-  const min = Math.round(diffMs / 60_000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const days = Math.round(hr / 24);
-  if (days < 30) return `${days}d ago`;
-  return d.toLocaleDateString();
+function useT() {
+  const { i18n } = useLingui();
+  return (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
+}
+
+function useFormatWhen() {
+  const t = useT();
+  return (iso: string): string => {
+    const d = new Date(iso);
+    const diffMs = Date.now() - d.getTime();
+    const min = Math.round(diffMs / 60_000);
+    if (min < 1) return t("relTime.justNow", "just now");
+    if (min < 60) return t("relTime.minutes", "{count}m ago", { count: min });
+    const hr = Math.round(min / 60);
+    if (hr < 24) return t("relTime.hours", "{count}h ago", { count: hr });
+    const days = Math.round(hr / 24);
+    if (days < 30) return t("relTime.days", "{count}d ago", { count: days });
+    return d.toLocaleDateString();
+  };
 }
 
 function formatDateTime(iso: string): string {
@@ -62,19 +74,25 @@ function formatDateTime(iso: string): string {
   }
 }
 
-function formatLocation(country: string | null, region: string | null): string {
-  const parts = [region, country].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "Location unknown";
+function useFormatLocation() {
+  const t = useT();
+  return (country: string | null, region: string | null): string => {
+    const parts = [region, country].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : t("devices.locationUnknown", "Location unknown");
+  };
 }
 
 function deviceIcon(label: string) {
-  const l = label.toLowerCase();
+  const l = (label || "").toLowerCase();
   if (l.includes("iphone") || l.includes("android")) return Smartphone;
   if (l.includes("ipad") || l.includes("tablet")) return Tablet;
   return Monitor;
 }
 
-export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
+export function DevicesSection({ heading }: { heading?: string }) {
+  const t = useT();
+  const formatWhen = useFormatWhen();
+  const formatLocation = useFormatLocation();
   const listFn = useServerFn(listMyDevices);
   const revokeFn = useServerFn(revokeDeviceSession);
 
@@ -84,14 +102,12 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<DeviceRow | null>(null);
-  // Screen-reader announcements. `politeMsg` uses role="status" for
-  // non-critical success updates; `assertiveMsg` uses role="alert" for
-  // failures so AT interrupts and reads them immediately.
   const [politeMsg, setPoliteMsg] = useState("");
   const [assertiveMsg, setAssertiveMsg] = useState("");
 
+  const resolvedHeading = heading ?? t("devices.section", "Devices");
+
   const announce = (text: string, tone: "polite" | "assertive" = "polite") => {
-    // Clear then set on next tick so repeated identical messages re-announce.
     if (tone === "assertive") {
       setAssertiveMsg("");
       window.setTimeout(() => setAssertiveMsg(text), 50);
@@ -108,9 +124,9 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
       const rows = await listFn();
       setDevices(rows);
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Could not load devices.";
-      toast.error("Couldn't load devices", { description: text });
-      announce(`Couldn't load devices. ${text}`, "assertive");
+      const text = err instanceof Error ? err.message : t("devices.error.load", "Could not load devices.");
+      toast.error(t("devices.error.loadTitle", "Couldn't load devices"), { description: text });
+      announce(t("devices.announce.errorLoad", "Couldn't load devices. {text}", { text }), "assertive");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -125,30 +141,31 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
   const confirmRevoke = async () => {
     const row = pendingRevoke;
     if (!row) return;
-    const label = row.is_current ? "this device" : row.device_label;
+    const label = row.is_current ? t("devices.thisDevice", "this device") : row.device_label;
     setBusyId(row.session_id);
     try {
       await revokeFn({ data: { sessionId: row.session_id } });
       if (row.is_current) {
-        toast.success("Signed out. Redirecting…");
-        announce("Signed out of this device. Redirecting to sign in.", "assertive");
+        toast.success(t("devices.toast.signedOutRedirecting", "Signed out. Redirecting…"));
+        announce(t("devices.announce.signedOutThisDevice", "Signed out of this device. Redirecting to sign in."), "assertive");
         setPendingRevoke(null);
         window.location.replace("/auth");
         return;
       }
       setDevices((prev) => (prev ? prev.filter((d) => d.session_id !== row.session_id) : prev));
       const location = formatLocation(row.coarse_country, row.coarse_region);
-      toast.success(`Signed out ${label}`, {
-        description: `${location} · Last active ${formatWhen(row.last_seen_at)}`,
+      const when = formatWhen(row.last_seen_at);
+      toast.success(t("devices.toast.signedOutDevice", "Signed out {label}", { label }), {
+        description: t("devices.toast.signedOutDeviceDetail", "{location} · Last active {when}", { location, when }),
       });
       announce(
-        `${label} in ${location} was signed out successfully. Last active ${formatWhen(row.last_seen_at)}.`,
+        t("devices.announce.signedOutDevice", "{label} in {location} was signed out successfully. Last active {when}.", { label, location, when }),
       );
       setPendingRevoke(null);
     } catch (err) {
-      const reason = err instanceof Error ? err.message : "Please try again.";
-      toast.error("Couldn't sign that device out", { description: reason });
-      announce(`Couldn't sign ${label} out. ${reason}`, "assertive");
+      const reason = err instanceof Error ? err.message : t("devices.error.revokeRetry", "Please try again.");
+      toast.error(t("devices.error.revoke", "Couldn't sign that device out"), { description: reason });
+      announce(t("devices.error.revokeDetail", "Couldn't sign {label} out. {reason}", { label, reason }), "assertive");
     } finally {
       setBusyId(null);
     }
@@ -157,18 +174,19 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
   const count = devices?.length ?? 0;
   const current = devices?.find((d) => d.is_current) ?? null;
   const summary = loading
-    ? "Loading…"
+    ? t("devices.loading", "Loading…")
     : count === 0
-      ? "No devices recorded yet"
+      ? t("devices.empty", "No devices recorded yet")
       : current
-        ? `${count} signed in · This device: ${current.device_label}`
-        : `${count} signed in`;
+        ? (count === 1
+          ? t("devices.summary.withCurrent.one", "{count} signed in · This device: {label}", { count, label: current.device_label })
+          : t("devices.summary.withCurrent.other", "{count} signed in · This device: {label}", { count, label: current.device_label }))
+        : (count === 1
+          ? t("devices.summary.count.one", "{count} signed in", { count })
+          : t("devices.summary.count.other", "{count} signed in", { count }));
 
   return (
     <>
-      {/* Screen-reader-only live regions. Kept outside the sheet so
-          announcements still fire after the sheet unmounts (e.g. after
-          a revoke closes the confirmation dialog). */}
       <div
         role="status"
         aria-live="polite"
@@ -189,7 +207,7 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
       <SettingsGroup>
         <SettingsRow
           icon={<Monitor className="h-4 w-4" strokeWidth={1.8} />}
-          title={heading}
+          title={resolvedHeading}
           description={summary}
           onClick={() => setSheetOpen(true)}
           chevron
@@ -221,15 +239,15 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingRevoke?.is_current
-                ? "Sign out this device?"
-                : `Revoke ${pendingRevoke?.device_label ?? "this device"}?`}
+                ? t("devices.dialog.signOutThisTitle", "Sign out this device?")
+                : t("devices.dialog.revokeTitle", "Revoke {label}?", { label: pendingRevoke?.device_label ?? t("devices.thisDevice", "this device") })}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left">
                 <p className="text-[13.5px] leading-[1.55]">
                   {pendingRevoke?.is_current
-                    ? "You'll be signed out of Aegis on this device right now and returned to the sign-in screen."
-                    : "This ends the session on that device immediately."}
+                    ? t("devices.dialog.signOutThisDesc", "You'll be signed out of Aegis on this device right now and returned to the sign-in screen.")
+                    : t("devices.dialog.revokeDesc", "This ends the session on that device immediately.")}
                 </p>
                 <ul
                   className="space-y-1.5 text-[12.5px] leading-[1.5]"
@@ -238,19 +256,18 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
                   <li className="flex gap-2">
                     <span aria-hidden>·</span>
                     <span>
-                      The device is signed out and its refresh token is invalidated. It will
-                      need to sign in with your email again to see any codes.
+                      {t("devices.dialog.bullet.refresh", "The device is signed out and its refresh token is invalidated. It will need to sign in with your email again to see any codes.")}
                     </span>
                   </li>
                   <li className="flex gap-2">
                     <span aria-hidden>·</span>
                     <span>
-                      Your encrypted vault is untouched. Codes on your other devices keep working.
+                      {t("devices.dialog.bullet.vault", "Your encrypted vault is untouched. Codes on your other devices keep working.")}
                     </span>
                   </li>
                   <li className="flex gap-2">
                     <span aria-hidden>·</span>
-                    <span>This action is recorded in your account's audit log.</span>
+                    <span>{t("devices.dialog.bullet.audit", "This action is recorded in your account's audit log.")}</span>
                   </li>
                 </ul>
 
@@ -267,8 +284,8 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
                           pendingRevoke.coarse_region,
                         )}
                       </div>
-                      <div>Last active {formatWhen(pendingRevoke.last_seen_at)}</div>
-                      <div>First signed in {formatDateTime(pendingRevoke.first_seen_at)}</div>
+                      <div>{t("devices.dialog.lastActive", "Last active {when}", { when: formatWhen(pendingRevoke.last_seen_at) })}</div>
+                      <div>{t("devices.dialog.firstSignedIn", "First signed in {when}", { when: formatDateTime(pendingRevoke.first_seen_at) })}</div>
                     </div>
                   </div>
                 )}
@@ -276,7 +293,7 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyId !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busyId !== null}>{t("devices.dialog.cancel", "Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -288,12 +305,12 @@ export function DevicesSection({ heading = "Devices" }: { heading?: string }) {
               {busyId ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Signing out…
+                  {t("devices.dialog.signingOut", "Signing out…")}
                 </>
               ) : pendingRevoke?.is_current ? (
-                "Sign out this device"
+                t("devices.dialog.signOutBtn", "Sign out this device")
               ) : (
-                "Revoke device"
+                t("devices.dialog.revokeBtn", "Revoke device")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -320,32 +337,31 @@ function DevicesSheet({
   onRevoke: (row: DeviceRow) => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const formatWhen = useFormatWhen();
+  const formatLocation = useFormatLocation();
   const count = devices?.length ?? 0;
   const titleId = useId();
   const descId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Snapshot previous focus, lock body scroll, restore on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Defer to next tick so the sheet is mounted before we focus into it.
-    const t = window.setTimeout(() => {
+    const tm = window.setTimeout(() => {
       closeBtnRef.current?.focus();
     }, 0);
     return () => {
-      window.clearTimeout(t);
+      window.clearTimeout(tm);
       document.body.style.overflow = prevOverflow;
-      // Only restore focus if the previously focused element is still in DOM.
       if (previouslyFocused && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
       }
     };
   }, []);
 
-  // ESC to close, Tab/Shift+Tab focus trap within the sheet.
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       e.stopPropagation();
@@ -426,11 +442,10 @@ function DevicesSheet({
                 color: CHARCOAL,
               }}
             >
-              Signed-in devices
+              {t("devices.sheet.title", "Signed-in devices")}
             </h2>
             <div id={descId} className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
-              Every device with an active Aegis session. Sign out any that
-              aren't yours.
+              {t("devices.sheet.subtitle", "Every device with an active Aegis session. Sign out any that aren't yours.")}
             </div>
           </div>
           <motion.button
@@ -440,7 +455,7 @@ function DevicesSheet({
             onClick={onClose}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             style={{ background: "rgb(var(--aegis-ink-rgb) / 0.06)", color: CHARCOAL }}
-            aria-label="Close signed-in devices"
+            aria-label={t("devices.sheet.closeAria", "Close signed-in devices")}
           >
             <X className="h-4 w-4" strokeWidth={1.8} />
           </motion.button>
@@ -459,7 +474,7 @@ function DevicesSheet({
             }}
           >
             <ShieldCheck className="h-3 w-3" strokeWidth={2} />
-            {loading ? "Loading" : `${count} active`}
+            {loading ? t("devices.sheet.loading", "Loading") : (count === 1 ? t("devices.sheet.activeCount.one", "{count} active", { count }) : t("devices.sheet.activeCount.other", "{count} active", { count }))}
           </span>
           <button
             type="button"
@@ -467,13 +482,13 @@ function DevicesSheet({
             disabled={loading || refreshing}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10.5px] uppercase disabled:opacity-50"
             style={{ color: MUTED, letterSpacing: "0.12em", fontWeight: 600 }}
-            aria-label="Refresh devices"
+            aria-label={t("devices.sheet.refreshAria", "Refresh devices")}
           >
             <RefreshCw
               className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
               strokeWidth={2}
             />
-            Refresh
+            {t("devices.sheet.refresh", "Refresh")}
           </button>
         </div>
 
@@ -493,8 +508,7 @@ function DevicesSheet({
                 color: MUTED,
               }}
             >
-              No devices recorded yet. Sign in from another device to see it
-              here.
+              {t("devices.sheet.empty", "No devices recorded yet. Sign in from another device to see it here.")}
             </div>
           )}
 
@@ -562,7 +576,7 @@ function DevicesSheet({
                                 fontWeight: 600,
                               }}
                             >
-                              · This device
+                              {t("devices.sheet.thisDevice", "· This device")}
                             </span>
                           )}
                         </div>
@@ -570,8 +584,7 @@ function DevicesSheet({
                           className="mt-0.5 truncate text-[12px] leading-[1.45]"
                           style={{ color: MUTED }}
                         >
-                          {formatLocation(d.coarse_country, d.coarse_region)} ·
-                          Active {formatWhen(d.last_seen_at)}
+                          {formatLocation(d.coarse_country, d.coarse_region)} · {t("devices.sheet.activeAt", "Active {when}", { when: formatWhen(d.last_seen_at) })}
                         </div>
                       </div>
                       <button
@@ -586,8 +599,8 @@ function DevicesSheet({
                         }}
                         aria-label={
                           d.is_current
-                            ? "Sign out this device"
-                            : `Sign out ${d.device_label}`
+                            ? t("devices.sheet.signOutThisAria", "Sign out this device")
+                            : t("devices.sheet.signOutDeviceAria", "Sign out {label}", { label: d.device_label })
                         }
                       >
                         {busy ? (
@@ -595,7 +608,7 @@ function DevicesSheet({
                         ) : (
                           <LogOut className="h-3.5 w-3.5" strokeWidth={1.8} />
                         )}
-                        {d.is_current ? "Sign out" : "Revoke"}
+                        {d.is_current ? t("devices.sheet.signOutBtn", "Sign out") : t("devices.sheet.revokeBtn", "Revoke")}
                       </button>
                     </motion.div>
                   );
@@ -609,7 +622,7 @@ function DevicesSheet({
           className="mt-3 shrink-0 text-center text-[11px]"
           style={{ color: MUTED, letterSpacing: "0.02em" }}
         >
-          Location is inferred from IP and never stored precisely.
+          {t("devices.sheet.locationDisclaimer", "Location is inferred from IP and never stored precisely.")}
         </p>
       </motion.div>
     </motion.div>
