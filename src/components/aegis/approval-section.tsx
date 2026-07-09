@@ -18,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { BellRing, BellOff, Send, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
+import { useLingui } from "@lingui/react";
 
 import { SectionLabel, SettingsGroup, SettingsRow } from "@/components/aegis/settings";
 import { BORDER, CHARCOAL, MUTED } from "@/components/aegis/chrome";
@@ -42,6 +43,11 @@ function isPushSupported(): boolean {
 }
 
 export function ApprovalSection() {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
   const [supported] = useState(() => isPushSupported());
   const [subscribed, setSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
@@ -79,20 +85,20 @@ export function ApprovalSection() {
         if (res.ok) {
           setSubscribed(true);
           setPermission("granted");
-          toast.success("Push notifications enabled");
+          toast.success(t("approval.toast.enabled", "Push notifications enabled"));
         } else {
           toast.error(
             res.reason === "denied"
-              ? "Permission denied. Enable notifications in browser settings."
+              ? t("approval.error.denied", "Permission denied. Enable notifications in browser settings.")
               : res.reason === "not_configured"
-              ? "Push not configured on this build (VITE_VAPID_PUBLIC_KEY missing)."
+              ? t("approval.error.notConfigured", "Push not configured on this build (VITE_VAPID_PUBLIC_KEY missing).")
               : res.reason === "unsupported"
-              ? "This browser doesn't support WebPush."
-              : `Couldn't subscribe (${res.reason})`,
+              ? t("approval.error.unsupported", "This browser doesn't support WebPush.")
+              : t("approval.error.subscribeGeneric", "Couldn't subscribe ({reason})", { reason: res.reason }),
           );
         }
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Subscribe failed");
+        toast.error(e instanceof Error ? e.message : t("approval.error.subscribeFailed", "Subscribe failed"));
       } finally {
         setBusy(null);
       }
@@ -101,9 +107,9 @@ export function ApprovalSection() {
       try {
         await unsubscribe();
         setSubscribed(false);
-        toast.success("Push notifications disabled");
+        toast.success(t("approval.toast.disabled", "Push notifications disabled"));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Unsubscribe failed");
+        toast.error(e instanceof Error ? e.message : t("approval.error.unsubscribeFailed", "Unsubscribe failed"));
       } finally {
         setBusy(null);
       }
@@ -128,29 +134,29 @@ export function ApprovalSection() {
         });
         toast.success(
           res.push && "delivered" in res.push && res.push.delivered > 0
-            ? `Sent to ${res.push.delivered} device(s). Check your notifications.`
-            : "Request created. Open the approve link to test locally.",
+            ? t("approval.toast.sentTo", "Sent to {count} device(s). Check your notifications.", { count: res.push.delivered })
+            : t("approval.toast.testCreated", "Request created. Open the approve link to test locally."),
         );
       } else {
-        toast.error("Couldn't create approval request");
+        toast.error(t("approval.error.createFailed", "Couldn't create approval request"));
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Request failed");
+      toast.error(e instanceof Error ? e.message : t("approval.error.requestFailed", "Request failed"));
     } finally {
       setBusy(null);
     }
   }
 
   const status = useMemo(() => {
-    if (!supported) return "This browser doesn't support push notifications.";
-    if (permission === "denied") return "Notifications blocked in browser settings.";
-    if (subscribed) return "This device is subscribed to approval pushes.";
-    return "Turn on to receive approval requests from your other devices.";
-  }, [supported, permission, subscribed]);
+    if (!supported) return t("approval.status.unsupported", "This browser doesn't support push notifications.");
+    if (permission === "denied") return t("approval.status.blocked", "Notifications blocked in browser settings.");
+    if (subscribed) return t("approval.status.subscribed", "This device is subscribed to approval pushes.");
+    return t("approval.status.off", "Turn on to receive approval requests from your other devices.");
+  }, [supported, permission, subscribed, i18n.locale]);
 
   return (
     <>
-      <SectionLabel>Cross-device approvals</SectionLabel>
+      <SectionLabel>{t("approval.section", "Cross-device approvals")}</SectionLabel>
       <SettingsGroup>
         <SettingsRow
           icon={
@@ -160,14 +166,14 @@ export function ApprovalSection() {
               <BellOff className="h-4 w-4" strokeWidth={1.8} />
             )
           }
-          title="Push notifications"
+          title={t("approval.push", "Push notifications")}
           description={status}
           trailing={
             <Switch
               checked={subscribed}
               disabled={!supported || busy !== null || permission === "denied"}
               onCheckedChange={(v) => void handleToggle(v)}
-              aria-label="Toggle push notifications"
+              aria-label={t("approval.toggleAria", "Toggle push notifications")}
             />
           }
         />
@@ -179,8 +185,8 @@ export function ApprovalSection() {
               <Send className="h-4 w-4" strokeWidth={1.8} />
             )
           }
-          title="Send test approval"
-          description="Sends a signed request to every device subscribed to your account."
+          title={t("approval.sendTest", "Send test approval")}
+          description={t("approval.sendTest.description", "Sends a signed request to every device subscribed to your account.")}
           onClick={busy === null ? handleTestRequest : undefined}
         />
       </SettingsGroup>
@@ -192,12 +198,13 @@ export function ApprovalSection() {
         >
           <div className="mb-1 flex items-center gap-1.5" style={{ color: CHARCOAL }}>
             <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "#3c8c5a" }} />
-            <span className="font-medium">Request created</span>
+            <span className="font-medium">{t("approval.requestCreated", "Request created")}</span>
           </div>
           <div className="mb-2" style={{ color: MUTED }}>
-            Delivered to {lastRequest.delivered} device(s)
-            {lastRequest.failed > 0 && `, ${lastRequest.failed} failed`}. Expires{" "}
-            {new Date(lastRequest.expiresAt).toLocaleTimeString()}.
+            {t("approval.deliveredTo", "Delivered to {count} device(s)", { count: lastRequest.delivered })}
+            {lastRequest.failed > 0 && t("approval.failedSuffix", ", {count} failed", { count: lastRequest.failed })}
+            {". "}
+            {t("approval.expires", "Expires {time}.", { time: new Date(lastRequest.expiresAt).toLocaleTimeString() })}
           </div>
           <Link
             to="/approve"
@@ -205,7 +212,7 @@ export function ApprovalSection() {
             className="inline-flex items-center gap-1 hover:underline"
             style={{ color: CHARCOAL }}
           >
-            Open approval page <ExternalLink className="h-3 w-3" />
+            {t("approval.openLink", "Open approval page")} <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
       )}

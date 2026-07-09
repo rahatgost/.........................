@@ -20,6 +20,7 @@ import {
   Copy,
   X,
 } from "lucide-react";
+import { useLingui } from "@lingui/react";
 
 import { BORDER, CHARCOAL, CREAM, CREAM_SOFT, DANGER, MUTED, soft } from "@/components/aegis/chrome";
 import { SettingsGroup, SettingsRow } from "@/components/aegis/settings";
@@ -44,13 +45,20 @@ import { BreachUpgradeCard } from "@/components/aegis/breach-upgrade-card";
  * secrets are logged or persisted.
  */
 
-function scoreTone(score: number): { label: string; color: string; bar: string } {
-  if (score >= 85) return { label: "Healthy", color: "#2f8f5b", bar: "#2f8f5b" };
-  if (score >= 60) return { label: "Fair", color: "#b0710d", bar: "#e0a30a" };
-  return { label: "Needs attention", color: DANGER, bar: DANGER };
+function scoreTone(score: number): { labelId: string; fallback: string; color: string; bar: string } {
+  if (score >= 85) return { labelId: "vaultHealth.status.healthy", fallback: "Healthy", color: "#2f8f5b", bar: "#2f8f5b" };
+  if (score >= 60) return { labelId: "vaultHealth.status.fair", fallback: "Fair", color: "#b0710d", bar: "#e0a30a" };
+  return { labelId: "vaultHealth.status.needsAttention", fallback: "Needs attention", color: DANGER, bar: DANGER };
 }
 
-export function VaultHealthSection({ heading = "Vault health" }: { heading?: string }) {
+export function VaultHealthSection({ heading }: { heading?: string }) {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
+
+  const finalHeading = heading || t("vaultHealth.section", "Vault health");
   const unlocked = useVaultUnlocked();
 
 
@@ -74,8 +82,9 @@ export function VaultHealthSection({ heading = "Vault health" }: { heading?: str
   const scan = async () => {
     const dek = getVaultKey();
     if (!dek) {
-      setErrorMsg("Vault is locked. Unlock to scan.");
-      announce("Vault is locked. Unlock to scan.", "assertive");
+      const msg = t("vaultHealth.error.locked", "Vault is locked. Unlock to scan.");
+      setErrorMsg(msg);
+      announce(msg, "assertive");
       return;
     }
     setLoading(true);
@@ -86,16 +95,17 @@ export function VaultHealthSection({ heading = "Vault health" }: { heading?: str
       setReport(next);
       const findings =
         next.duplicates.length + next.weakFavorites.length + next.missingIcons.length;
-      announce(
-        findings === 0
-          ? `Vault health score ${next.score} out of 100. No issues found.`
-          : `Vault health score ${next.score} out of 100. ${findings} ${findings === 1 ? "finding" : "findings"}.`,
-      );
+
+      if (findings === 0) {
+        announce(t("vaultHealth.announce.perfect", "Vault health score {score} out of 100. No issues found.", { score: next.score }));
+      } else {
+        announce(t("vaultHealth.announce.findings", "Vault health score {score} out of 100. {count} {count, plural, one {finding} other {findings}}.", { score: next.score, count: findings }));
+      }
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Could not scan the vault.";
+      const text = err instanceof Error ? err.message : t("vaultHealth.error.generic", "Could not scan the vault.");
       setErrorMsg(text);
-      toast.error("Vault health scan failed", { description: text });
-      announce(`Vault health scan failed. ${text}`, "assertive");
+      toast.error(t("vaultHealth.toast.failed", "Vault health scan failed"), { description: text });
+      announce(t("vaultHealth.announce.failed", "Vault health scan failed. {text}", { text }), "assertive");
     } finally {
       setLoading(false);
     }
@@ -114,12 +124,12 @@ export function VaultHealthSection({ heading = "Vault health" }: { heading?: str
     ? report.duplicates.length + report.weakFavorites.length + report.missingIcons.length
     : 0;
   const summary = !unlocked
-    ? "Unlock the vault to run a health check"
+    ? t("vaultHealth.summary.locked", "Unlock the vault to run a health check")
     : report
       ? findingCount === 0
-        ? `All clear · Score ${report.score}/100`
-        : `${findingCount} ${findingCount === 1 ? "finding" : "findings"} · Score ${report.score}/100`
-      : "Tap to scan for duplicates, missing icons, and weak favourites";
+        ? t("vaultHealth.summary.perfect", "All clear · Score {score}/100", { score: report.score })
+        : t("vaultHealth.summary.findings", "{count} {count, plural, one {finding} other {findings}} · Score {score}/100", { count: findingCount, score: report.score })
+      : t("vaultHealth.summary.idle", "Tap to scan for duplicates, missing icons, and weak favourites");
 
   return (
     <>
@@ -133,7 +143,7 @@ export function VaultHealthSection({ heading = "Vault health" }: { heading?: str
       <SettingsGroup>
         <SettingsRow
           icon={<ShieldCheck className="h-4 w-4" strokeWidth={1.8} />}
-          title={heading}
+          title={finalHeading}
           description={summary}
           onClick={() => setSheetOpen(true)}
           chevron
@@ -174,6 +184,12 @@ export function HealthSheet({
   onRescan: () => void;
   onClose: () => void;
 }) {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
+
   const titleId = useId();
   const descId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -288,10 +304,10 @@ export function HealthSheet({
                 color: CHARCOAL,
               }}
             >
-              Vault health
+              {t("vaultHealth.title", "Vault health")}
             </h2>
             <div id={descId} className="mt-1.5 text-[13px]" style={{ color: MUTED, lineHeight: 1.5 }}>
-              Everything below runs on this device. Your secrets never leave the vault.
+              {t("vaultHealth.disclaimer", "Everything below runs on this device. Your secrets never leave the vault.")}
             </div>
           </div>
           <motion.button
@@ -305,7 +321,7 @@ export function HealthSheet({
               border: `1px solid rgb(var(--aegis-ink-rgb) / 0.4)`,
               color: CHARCOAL,
             }}
-            aria-label="Close vault health"
+            aria-label={t("vaultHealth.closeAria", "Close vault health")}
           >
             <X className="h-3.5 w-3.5" strokeWidth={1.8} />
           </motion.button>
@@ -323,7 +339,7 @@ export function HealthSheet({
                 lineHeight: 1.5,
               }}
             >
-              Unlock the vault to run a health scan.
+              {t("vaultHealth.lockedMsg", "Unlock the vault to run a health scan.")}
             </div>
           )}
 
@@ -331,7 +347,7 @@ export function HealthSheet({
             <div className="flex flex-col items-center gap-3 py-10">
               <Loader2 className="h-5 w-5 animate-spin" style={{ color: MUTED }} />
               <div className="text-[13px]" style={{ color: MUTED }}>
-                Hashing secrets in memory…
+                {t("vaultHealth.loadingMsg", "Hashing secrets in memory…")}
               </div>
             </div>
           )}
@@ -347,7 +363,7 @@ export function HealthSheet({
                 lineHeight: 1.5,
               }}
             >
-              <div style={{ fontWeight: 600 }}>Vault health scan failed</div>
+              <div style={{ fontWeight: 600 }}>{t("vaultHealth.sheetError.title", "Vault health scan failed")}</div>
               <div className="mt-1 text-[13px]" style={{ color: MUTED }}>
                 {errorMsg}
               </div>
@@ -364,7 +380,7 @@ export function HealthSheet({
                 }}
               >
                 <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} />
-                Try again
+                {t("vaultHealth.button.tryAgain", "Try again")}
               </button>
             </div>
           )}
@@ -378,20 +394,20 @@ export function HealthSheet({
                   background: CREAM,
                   border: `1px solid ${BORDER}`,
                 }}
-                aria-label={`Vault health score ${report.score} out of 100, ${tone.label}`}
+                aria-label={t("vaultHealth.scoreAria", "Vault health score {score} out of 100, {label}", { score: report.score, label: t(tone.labelId, tone.fallback) })}
               >
                 <div className="flex items-baseline justify-between">
                   <div
                     className="text-[10.5px] uppercase"
                     style={{ color: MUTED, letterSpacing: "0.18em", fontWeight: 600 }}
                   >
-                    Score
+                    {t("vaultHealth.label.score", "Score")}
                   </div>
                   <div
                     className="text-[10.5px] uppercase"
                     style={{ color: tone.color, letterSpacing: "0.18em", fontWeight: 600 }}
                   >
-                    {tone.label}
+                    {t(tone.labelId, tone.fallback)}
                   </div>
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
@@ -411,8 +427,7 @@ export function HealthSheet({
                     / 100
                   </span>
                   <span className="ml-auto text-[13px]" style={{ color: MUTED }}>
-                    {report.totalAccounts}{" "}
-                    {report.totalAccounts === 1 ? "account" : "accounts"}
+                    {t("vaultHealth.label.accountCount", "{count} {count, plural, one {account} other {accounts}}", { count: report.totalAccounts })}
                   </span>
                 </div>
                 <div
@@ -439,7 +454,7 @@ export function HealthSheet({
                   }}
                 >
                   <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  Rescan
+                  {t("vaultHealth.button.rescan", "Rescan")}
                 </button>
               </div>
 
@@ -447,8 +462,8 @@ export function HealthSheet({
               <Category
 
                 icon={<Copy className="h-3.5 w-3.5" strokeWidth={2} />}
-                title="Duplicate secrets"
-                emptyText="No duplicate TOTP secrets — every account has a unique key."
+                title={t("vaultHealth.duplicates.title", "Duplicate secrets")}
+                emptyText={t("vaultHealth.duplicates.empty", "No duplicate TOTP secrets — every account has a unique key.")}
                 count={report.duplicates.length}
                 severity="warn"
               >
@@ -465,12 +480,12 @@ export function HealthSheet({
                       className="text-[11px] uppercase"
                       style={{ color: MUTED, letterSpacing: "0.12em", fontWeight: 600 }}
                     >
-                      Group #{d.groupId}
+                      {t("vaultHealth.duplicates.groupLabel", "Group #{id}", { id: d.groupId })}
                     </div>
                     <ul className="mt-1 space-y-0.5">
                       {d.labels.map((l) => (
                         <li key={l.id} className="text-[13px]" style={{ color: CHARCOAL }}>
-                          <span style={{ fontWeight: 600 }}>{l.issuer || "Unknown"}</span>
+                          <span style={{ fontWeight: 600 }}>{l.issuer || t("vaultHealth.issuer.unknown", "Unknown")}</span>
                           {l.label && (
                             <span style={{ color: MUTED }}> · {l.label}</span>
                           )}
@@ -478,8 +493,7 @@ export function HealthSheet({
                       ))}
                     </ul>
                     <div className="mt-1 text-[11.5px]" style={{ color: MUTED }}>
-                      These accounts share the same TOTP secret. If that's not intentional
-                      (e.g. same site with two labels), consider deleting the duplicates.
+                      {t("vaultHealth.duplicates.explanation", "These accounts share the same TOTP secret. If that's not intentional (e.g. same site with two labels), consider deleting the duplicates.")}
                     </div>
                   </div>
                 ))}
@@ -488,8 +502,8 @@ export function HealthSheet({
               {/* Weak favourites */}
               <Category
                 icon={<Heart className="h-3.5 w-3.5" strokeWidth={2} />}
-                title="Weak favourites"
-                emptyText="Every favourite is tied to a recognised issuer."
+                title={t("vaultHealth.weakFavorites.title", "Weak favourites")}
+                emptyText={t("vaultHealth.weakFavorites.empty", "Every favourite is tied to a recognised issuer.")}
                 count={report.weakFavorites.length}
                 severity="warn"
               >
@@ -504,7 +518,7 @@ export function HealthSheet({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px]" style={{ color: CHARCOAL, fontWeight: 600 }}>
-                        {w.issuer || "Unknown issuer"}
+                        {w.issuer || t("vaultHealth.issuer.unknown", "Unknown")}
                       </div>
                       {w.label && (
                         <div className="truncate text-[12px]" style={{ color: MUTED }}>
@@ -513,8 +527,8 @@ export function HealthSheet({
                       )}
                       <div className="mt-0.5 text-[11.5px]" style={{ color: MUTED }}>
                         {w.reason === "no_domain"
-                          ? "No domain match — rename the issuer to its brand for cleaner recovery."
-                          : "Domain matched but no brand logo — the row will show initials."}
+                          ? t("vaultHealth.weakFavorites.noDomain", "No domain match — rename the issuer to its brand for cleaner recovery.")
+                          : t("vaultHealth.weakFavorites.noIcon", "Domain matched but no brand logo — the row will show initials.")}
                       </div>
                     </div>
                   </div>
@@ -524,8 +538,8 @@ export function HealthSheet({
               {/* Missing icons */}
               <Category
                 icon={<ImageIcon className="h-3.5 w-3.5" strokeWidth={2} />}
-                title="Missing icons"
-                emptyText="Every account has a brand logo."
+                title={t("vaultHealth.missingIcons.title", "Missing icons")}
+                emptyText={t("vaultHealth.missingIcons.empty", "Every account has a brand logo.")}
                 count={report.missingIcons.length}
                 severity="info"
               >
@@ -540,7 +554,7 @@ export function HealthSheet({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px]" style={{ color: CHARCOAL }}>
-                        <span style={{ fontWeight: 600 }}>{m.issuer || "Unknown"}</span>
+                        <span style={{ fontWeight: 600 }}>{m.issuer || t("vaultHealth.issuer.unknown", "Unknown")}</span>
                         {m.label && (
                           <span style={{ color: MUTED }}> · {m.label}</span>
                         )}
@@ -553,8 +567,8 @@ export function HealthSheet({
               {/* HIBP — opt-in per issuer */}
               <Category
                 icon={<ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />}
-                title="Breach check (optional)"
-                emptyText="No issuers to check."
+                title={t("vaultHealth.hibp.title", "Breach check (optional)")}
+                emptyText={t("vaultHealth.hibp.empty", "No issuers to check.")}
                 count={-1 /* always render body */}
                 severity="info"
               >
@@ -563,10 +577,7 @@ export function HealthSheet({
                 ) : (
                   <>
                 <div className="text-[11.5px]" style={{ color: MUTED }}>
-                  Tap an issuer to run an anonymous k-anonymity lookup against
-                  Have I Been Pwned. Only the first 5 characters of the hashed
-                  domain are sent — the issuer name and full hash stay on this
-                  device.
+                  {t("vaultHealth.hibp.explanation", "Tap an issuer to run an anonymous k-anonymity lookup against Have I Been Pwned. Only the first 5 characters of the hashed domain are sent — the issuer name and full hash stay on this device.")}
                 </div>
 
                 <div className="space-y-1.5">
@@ -587,16 +598,16 @@ export function HealthSheet({
                           </div>
                           <div className="text-[11.5px]" style={{ color: MUTED }}>
                             {r === "loading"
-                              ? "Checking…"
+                              ? t("vaultHealth.hibp.checking", "Checking…")
                               : r?.status === "match"
-                                ? `Prefix match (${r.count} hits). Coarse signal only.`
+                                ? t("vaultHealth.hibp.match", "Prefix match ({count} hits). Coarse signal only.", { count: r.count })
                                 : r?.status === "clean"
-                                  ? "No prefix match in HIBP corpus."
+                                  ? t("vaultHealth.hibp.clean", "No prefix match in HIBP corpus.")
                                   : r?.status === "skipped"
                                     ? r.reason
                                     : r?.status === "error"
                                       ? r.message
-                                      : "Not checked yet."}
+                                      : t("vaultHealth.hibp.idle", "Not checked yet.")}
                           </div>
                         </div>
                         <button
@@ -611,7 +622,7 @@ export function HealthSheet({
                             fontWeight: 400,
                           }}
                         >
-                          {r === "loading" ? "…" : r ? "Recheck" : "Check"}
+                          {r === "loading" ? "…" : r ? t("vaultHealth.hibp.button.recheck", "Recheck") : t("vaultHealth.hibp.button.check", "Check")}
                         </button>
 
                       </div>
@@ -627,7 +638,7 @@ export function HealthSheet({
                 className="pt-1 text-center text-[10.5px]"
                 style={{ color: MUTED, letterSpacing: "0.02em" }}
               >
-                Scanned {new Date(report.scannedAt).toLocaleTimeString()}
+                {t("vaultHealth.scannedAt", "Scanned {time}", { time: new Date(report.scannedAt).toLocaleTimeString() })}
               </div>
             </div>
           )}

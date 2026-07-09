@@ -3,17 +3,23 @@
 // presentational and only mounts when `canPrompt` is true.
 
 import { Download, X } from "lucide-react";
+import { useLingui } from "@lingui/react";
 import { usePwaInstallPrompt } from "@/hooks/use-pwa-install";
 import { BORDER, CHARCOAL, CREAM_SOFT, MUTED } from "./chrome";
 
 export function InstallPrompt() {
   const { canPrompt, prompt, dismiss } = usePwaInstallPrompt();
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string) => {
+    const msg = i18n._(id);
+    return msg === id ? fallback : msg;
+  };
   if (!canPrompt) return null;
 
   return (
     <div
       role="region"
-      aria-label="Install Aegis"
+      aria-label={t("install.aria", "Install Aegis")}
       className="mb-2 mt-1 flex items-center gap-3 rounded-[14px] px-3.5 py-2.5"
       style={{
         background: CREAM_SOFT,
@@ -30,10 +36,10 @@ export function InstallPrompt() {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-[13px] leading-[1.25]" style={{ color: CHARCOAL, fontWeight: 600 }}>
-          Install Aegis
+          {t("install.title", "Install Aegis")}
         </div>
         <div className="text-[11.5px] leading-[1.3]" style={{ color: MUTED }}>
-          Open your codes from the home screen — works offline.
+          {t("install.body", "Open your codes from the home screen — works offline.")}
         </div>
       </div>
       <button
@@ -47,12 +53,12 @@ export function InstallPrompt() {
           letterSpacing: "-0.005em",
         }}
       >
-        Install
+        {t("install.cta", "Install")}
       </button>
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dismiss install prompt"
+        aria-label={t("install.dismiss", "Dismiss install prompt")}
         className="shrink-0 rounded-full p-1.5 transition-colors hover:bg-[rgb(var(--aegis-ink-rgb)/0.06)]"
         style={{ color: MUTED }}
       >

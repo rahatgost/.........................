@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Puzzle, ShieldOff } from "lucide-react";
+import { useLingui } from "@lingui/react";
 
 import { SectionLabel, SettingsGroup, SettingsRow } from "@/components/aegis/settings";
 import { BORDER, CHARCOAL, MUTED } from "@/components/aegis/chrome";
@@ -26,6 +27,11 @@ import {
 } from "@/lib/extension-bridge";
 
 export function ExtensionTrustSection() {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string) => {
+    const msg = i18n._(id);
+    return msg === id ? fallback : msg;
+  };
   const [detectedId, setDetectedId] = useState<string | null>(() =>
     discoverExtensionIdUnverified(),
   );
@@ -63,7 +69,7 @@ export function ExtensionTrustSection() {
     try {
       trustExtensionRuntime(detectedId);
       setTrusted(true);
-      toast.success("Extension trusted on this device");
+      toast.success(t("extTrust.toast.trusted", "Extension trusted on this device"));
     } finally {
       setBusy(false);
     }
@@ -75,7 +81,7 @@ export function ExtensionTrustSection() {
     try {
       untrustExtensionRuntime(detectedId);
       setTrusted(isExtensionInstalled());
-      toast.success("Extension trust removed");
+      toast.success(t("extTrust.toast.removed", "Extension trust removed"));
     } finally {
       setBusy(false);
     }
@@ -83,7 +89,7 @@ export function ExtensionTrustSection() {
 
   return (
     <>
-      <SectionLabel>Extension trust</SectionLabel>
+      <SectionLabel>{t("extTrust.section", "Extension trust")}</SectionLabel>
       <SettingsGroup>
         <SettingsRow
           icon={
@@ -93,31 +99,31 @@ export function ExtensionTrustSection() {
               <AlertTriangle className="h-4 w-4" strokeWidth={1.8} style={{ color: "#b47a2d" }} />
             )
           }
-          title={trusted ? "Extension trusted" : "Untrusted extension detected"}
+          title={trusted ? t("extTrust.status.trusted", "Extension trusted") : t("extTrust.status.untrusted", "Untrusted extension detected")}
           description={
             trusted
-              ? "This device will sync your vault to the extension."
-              : "Sync is blocked until you explicitly trust this extension ID."
+              ? t("extTrust.status.trusted.description", "This device will sync your vault to the extension.")
+              : t("extTrust.status.untrusted.description", "Sync is blocked until you explicitly trust this extension ID.")
           }
         />
         <SettingsRow
           icon={<Puzzle className="h-4 w-4" strokeWidth={1.8} />}
-          title="Extension ID"
+          title={t("extTrust.extensionId", "Extension ID")}
           description={detectedId}
         />
         {!runtimeTrusted && !trusted && (
           <SettingsRow
             icon={<CheckCircle2 className="h-4 w-4" strokeWidth={1.8} />}
-            title={busy ? "Trusting…" : "Trust this extension"}
-            description="Only click if you installed the Aegis extension yourself."
+            title={busy ? t("extTrust.trusting", "Trusting…") : t("extTrust.trust", "Trust this extension")}
+            description={t("extTrust.trust.description", "Only click if you installed the Aegis extension yourself.")}
             onClick={busy ? undefined : handleTrust}
           />
         )}
         {runtimeTrusted && (
           <SettingsRow
             icon={<ShieldOff className="h-4 w-4" strokeWidth={1.8} />}
-            title={busy ? "Removing…" : "Remove trust"}
-            description="Revoke this device's trust for the extension above."
+            title={busy ? t("extTrust.removing", "Removing…") : t("extTrust.remove", "Remove trust")}
+            description={t("extTrust.remove.description", "Revoke this device's trust for the extension above.")}
             onClick={busy ? undefined : handleUntrust}
             danger
           />
@@ -129,11 +135,12 @@ export function ExtensionTrustSection() {
           style={{ background: "#faf3e6", border: `1px solid ${BORDER}`, color: MUTED }}
         >
           <div className="mb-1 font-medium" style={{ color: CHARCOAL }}>
-            Why the extra step?
+            {t("extTrust.why.title", "Why the extra step?")}
           </div>
-          Any browser extension can stamp its ID into the page. Aegis only trusts IDs on
-          the official published list, or ones you explicitly approve here — otherwise a
-          malicious extension could impersonate Aegis and receive your vault secrets.
+          {t(
+            "extTrust.why.body",
+            "Any browser extension can stamp its ID into the page. Aegis only trusts IDs on the official published list, or ones you explicitly approve here — otherwise a malicious extension could impersonate Aegis and receive your vault secrets.",
+          )}
         </div>
       )}
     </>

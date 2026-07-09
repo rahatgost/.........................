@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { History, Monitor, RefreshCw, Smartphone, Tablet, X } from "lucide-react";
+import { useLingui } from "@lingui/react";
 
 import { BORDER, CHARCOAL, CREAM_SOFT, MUTED, soft } from "@/components/aegis/chrome";
 import { SettingsGroup, SettingsRow } from "@/components/aegis/settings";
@@ -10,21 +11,30 @@ import { listMyLoginEvents, type LoginEventRow } from "@/lib/devices.functions";
 
 /**
  * Phase 9.2 — Sign-in history.
- * Compact row on the Security tab; opens a bottom sheet that lists the
- * last 20 successful sign-ins. Read-only; nothing here mutates state.
  */
 
-function formatWhen(iso: string): string {
-  const d = new Date(iso);
-  const diffMs = Date.now() - d.getTime();
-  const min = Math.round(diffMs / 60_000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const days = Math.round(hr / 24);
-  if (days < 30) return `${days}d ago`;
-  return d.toLocaleDateString();
+function useT() {
+  const { i18n } = useLingui();
+  return (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
+}
+
+function useFormatWhen() {
+  const t = useT();
+  return (iso: string): string => {
+    const d = new Date(iso);
+    const diffMs = Date.now() - d.getTime();
+    const min = Math.round(diffMs / 60_000);
+    if (min < 1) return t("relTime.justNow", "just now");
+    if (min < 60) return t("relTime.minutes", "{count}m ago", { count: min });
+    const hr = Math.round(min / 60);
+    if (hr < 24) return t("relTime.hours", "{count}h ago", { count: hr });
+    const days = Math.round(hr / 24);
+    if (days < 30) return t("relTime.days", "{count}d ago", { count: days });
+    return d.toLocaleDateString();
+  };
 }
 
 function formatDateTime(iso: string): string {
@@ -38,11 +48,6 @@ function formatDateTime(iso: string): string {
   }
 }
 
-function formatLocation(country: string | null, region: string | null): string {
-  const parts = [region, country].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "Location unknown";
-}
-
 function deviceIcon(label: string) {
   const l = (label || "").toLowerCase();
   if (l.includes("iphone") || l.includes("android")) return Smartphone;
@@ -50,7 +55,9 @@ function deviceIcon(label: string) {
   return Monitor;
 }
 
-export function SignInHistorySection({ heading = "Sign-in history" }: { heading?: string }) {
+export function SignInHistorySection({ heading }: { heading?: string }) {
+  const t = useT();
+  const formatWhen = useFormatWhen();
   const listFn = useServerFn(listMyLoginEvents);
   const [events, setEvents] = useState<LoginEventRow[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +66,8 @@ export function SignInHistorySection({ heading = "Sign-in history" }: { heading?
   const [sheetOpen, setSheetOpen] = useState(false);
   const [politeMsg, setPoliteMsg] = useState("");
   const [assertiveMsg, setAssertiveMsg] = useState("");
+
+  const resolvedHeading = heading ?? t("signInHistory.heading", "Sign-in history");
 
   const announce = (text: string, tone: "polite" | "assertive" = "polite") => {
     if (tone === "assertive") {
@@ -80,15 +89,17 @@ export function SignInHistorySection({ heading = "Sign-in history" }: { heading?
       if (silent) {
         announce(
           rows.length === 0
-            ? "Sign-in history refreshed. No sign-ins recorded yet."
-            : `Sign-in history refreshed. ${rows.length} recent ${rows.length === 1 ? "sign-in" : "sign-ins"}.`,
+            ? t("signInHistory.announce.emptyRefresh", "Sign-in history refreshed. No sign-ins recorded yet.")
+            : rows.length === 1
+              ? t("signInHistory.announce.refresh.one", "Sign-in history refreshed. {count} recent sign-in.", { count: rows.length })
+              : t("signInHistory.announce.refresh.other", "Sign-in history refreshed. {count} recent sign-ins.", { count: rows.length }),
         );
       }
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Could not load sign-in history.";
+      const text = err instanceof Error ? err.message : t("signInHistory.error.load", "Could not load sign-in history.");
       setErrorMsg(text);
-      toast.error("Couldn't load sign-in history", { description: text });
-      announce(`Couldn't load sign-in history. ${text}`, "assertive");
+      toast.error(t("signInHistory.error.title", "Couldn't load sign-in history"), { description: text });
+      announce(t("signInHistory.announce.error", "Couldn't load sign-in history. {text}", { text }), "assertive");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,14 +114,16 @@ export function SignInHistorySection({ heading = "Sign-in history" }: { heading?
   const count = events?.length ?? 0;
   const latest = events?.[0] ?? null;
   const summary = loading
-    ? "Loading…"
+    ? t("signInHistory.loading", "Loading…")
     : errorMsg
-      ? "Couldn't load sign-in history"
+      ? t("signInHistory.error.title", "Couldn't load sign-in history")
       : count === 0
-        ? "No sign-ins recorded yet"
+        ? t("signInHistory.empty", "No sign-ins recorded yet")
         : latest
-          ? `Last sign-in ${formatWhen(latest.event_at)} · ${latest.device_label}`
-          : `${count} recent sign-ins`;
+          ? t("signInHistory.summary.latest", "Last sign-in {when} · {device}", { when: formatWhen(latest.event_at), device: latest.device_label })
+          : count === 1
+            ? t("signInHistory.summary.count.one", "{count} recent sign-in", { count })
+            : t("signInHistory.summary.count.other", "{count} recent sign-ins", { count });
 
   return (
     <>
@@ -124,7 +137,7 @@ export function SignInHistorySection({ heading = "Sign-in history" }: { heading?
       <SettingsGroup>
         <SettingsRow
           icon={<History className="h-4 w-4" strokeWidth={1.8} />}
-          title={heading}
+          title={resolvedHeading}
           description={summary}
           onClick={() => setSheetOpen(true)}
           chevron
@@ -164,6 +177,8 @@ function HistorySheet({
   onRefresh: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const formatWhen = useFormatWhen();
   const titleId = useId();
   const descId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -173,11 +188,11 @@ function HistorySheet({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const t = window.setTimeout(() => {
+    const tm = window.setTimeout(() => {
       closeBtnRef.current?.focus();
     }, 0);
     return () => {
-      window.clearTimeout(t);
+      window.clearTimeout(tm);
       document.body.style.overflow = prevOverflow;
       if (previouslyFocused && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
@@ -211,6 +226,11 @@ function HistorySheet({
   };
 
   const count = events?.length ?? 0;
+
+  const formatLocation = (country: string | null, region: string | null): string => {
+    const parts = [region, country].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : t("signInHistory.locationUnknown", "Location unknown");
+  };
 
   return (
     <motion.div
@@ -267,10 +287,10 @@ function HistorySheet({
                 color: CHARCOAL,
               }}
             >
-              Sign-in history
+              {t("signInHistory.title", "Sign-in history")}
             </h2>
             <div id={descId} className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
-              The last 20 successful sign-ins to your Aegis account. Kept for 90 days.
+              {t("signInHistory.subtitle", "The last 20 successful sign-ins to your Aegis account. Kept for 90 days.")}
             </div>
           </div>
           <motion.button
@@ -280,7 +300,7 @@ function HistorySheet({
             onClick={onClose}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             style={{ background: "rgb(var(--aegis-ink-rgb) / 0.06)", color: CHARCOAL }}
-            aria-label="Close sign-in history"
+            aria-label={t("signInHistory.closeAria", "Close sign-in history")}
           >
             <X className="h-4 w-4" strokeWidth={1.8} />
           </motion.button>
@@ -298,7 +318,7 @@ function HistorySheet({
             }}
           >
             <History className="h-3 w-3" strokeWidth={2} />
-            {loading ? "Loading" : `${count} recent`}
+            {loading ? t("signInHistory.loadingShort", "Loading") : t("signInHistory.recentCount", "{count} recent", { count })}
           </span>
           <button
             type="button"
@@ -306,19 +326,19 @@ function HistorySheet({
             disabled={loading || refreshing}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10.5px] uppercase disabled:opacity-50"
             style={{ color: MUTED, letterSpacing: "0.12em", fontWeight: 600 }}
-            aria-label="Refresh sign-in history"
+            aria-label={t("signInHistory.refreshAria", "Refresh sign-in history")}
           >
             <RefreshCw
               className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
               strokeWidth={2}
             />
-            Refresh
+            {t("signInHistory.refresh", "Refresh")}
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto pb-1" aria-busy={loading}>
           {loading && (
-            <ol className="space-y-2" aria-label="Loading sign-in history">
+            <ol className="space-y-2" aria-label={t("signInHistory.loadingAria", "Loading sign-in history")}>
               {[0, 1, 2, 3].map((i) => (
                 <li
                   key={i}
@@ -352,7 +372,7 @@ function HistorySheet({
                   </div>
                 </li>
               ))}
-              <span className="sr-only">Loading sign-in history…</span>
+              <span className="sr-only">{t("signInHistory.loadingSr", "Loading sign-in history…")}</span>
             </ol>
           )}
 
@@ -366,7 +386,7 @@ function HistorySheet({
                 color: CHARCOAL,
               }}
             >
-              <div style={{ fontWeight: 600 }}>Couldn't load sign-in history</div>
+              <div style={{ fontWeight: 600 }}>{t("signInHistory.error.title", "Couldn't load sign-in history")}</div>
               <div className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
                 {errorMsg}
               </div>
@@ -386,7 +406,7 @@ function HistorySheet({
                   className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
                   strokeWidth={2}
                 />
-                Try again
+                {t("common.retry", "Try again")}
               </button>
             </div>
           )}
@@ -408,10 +428,10 @@ function HistorySheet({
               </div>
               <div>
                 <div className="text-[13.5px]" style={{ color: CHARCOAL, fontWeight: 600 }}>
-                  No sign-ins recorded yet
+                  {t("signInHistory.empty", "No sign-ins recorded yet")}
                 </div>
                 <div className="mt-1 text-[12px]" style={{ color: MUTED }}>
-                  New sign-ins will appear here for 90 days.
+                  {t("signInHistory.empty.body", "New sign-ins will appear here for 90 days.")}
                 </div>
               </div>
             </div>
@@ -443,7 +463,7 @@ function HistorySheet({
                         className="truncate text-[13.5px]"
                         style={{ color: CHARCOAL, fontWeight: 600 }}
                       >
-                        {ev.device_label || "Unknown device"}
+                        {ev.device_label || t("signInHistory.unknownDevice", "Unknown device")}
                       </div>
                       <div
                         className="mt-0.5 truncate text-[12px]"

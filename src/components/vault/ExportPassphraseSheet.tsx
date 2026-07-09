@@ -6,6 +6,7 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
+import { useLingui } from "@lingui/react";
 import {
   BORDER,
   CHARCOAL,
@@ -24,8 +25,8 @@ export function ExportPassphraseSheet({
   accounts,
   onClose,
   onDone,
-  title = "Encrypted export",
-  subtitle = "Pick a passphrase for this backup file. You'll need it to restore.",
+  title,
+  subtitle,
 }: {
   accounts: DecryptedAccount[];
   onClose: () => void;
@@ -33,6 +34,15 @@ export function ExportPassphraseSheet({
   title?: string;
   subtitle?: string;
 }) {
+  const { i18n } = useLingui();
+  const t = (id: string, fallback: string, values?: Record<string, unknown>) => {
+    const msg = i18n._(id, values);
+    return msg === id ? fallback : msg;
+  };
+  const resolvedTitle = title ?? t("export.title", "Encrypted export");
+  const resolvedSubtitle =
+    subtitle ?? t("export.subtitle", "Pick a passphrase for this backup file. You'll need it to restore.");
+
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,7 +56,7 @@ export function ExportPassphraseSheet({
     setErr(null);
     if (!canSubmit) return;
     if (accounts.length === 0) {
-      setErr("Nothing selected to export.");
+      setErr(t("export.error.nothing", "Nothing selected to export."));
       return;
     }
     setBusy(true);
@@ -55,7 +65,7 @@ export function ExportPassphraseSheet({
       downloadExport(file);
       onDone(accounts.length);
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Could not build export.");
+      setErr(e2 instanceof Error ? e2.message : t("export.error.build", "Could not build export."));
     } finally {
       setBusy(false);
     }
@@ -69,7 +79,7 @@ export function ExportPassphraseSheet({
       exit={{ opacity: 0 }}
     >
       <motion.button
-        aria-label="Close"
+        aria-label={t("common.close", "Close")}
         onClick={onClose}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -91,9 +101,11 @@ export function ExportPassphraseSheet({
       >
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <div style={typeSheetTitleLg}>{title}</div>
+            <div style={typeSheetTitleLg}>{resolvedTitle}</div>
             <div className="mt-1" style={{ ...typeSubLabel, fontSize: 12.5 }}>
-              {accounts.length} account{accounts.length === 1 ? "" : "s"} selected. {subtitle}
+              {accounts.length === 1
+                ? t("export.count.one", "{count} account selected. {subtitle}", { count: accounts.length, subtitle: resolvedSubtitle })
+                : t("export.count.other", "{count} accounts selected. {subtitle}", { count: accounts.length, subtitle: resolvedSubtitle })}
             </div>
           </div>
 
@@ -102,7 +114,7 @@ export function ExportPassphraseSheet({
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full"
             style={{ background: "rgb(var(--aegis-ink-rgb) / 0.06)", color: CHARCOAL }}
-            aria-label="Close"
+            aria-label={t("common.close", "Close")}
           >
             <X className="h-4 w-4" strokeWidth={1.8} />
           </motion.button>
@@ -114,7 +126,7 @@ export function ExportPassphraseSheet({
             onChange={setPassphrase}
             autoComplete="new-password"
             minLength={10}
-            placeholder="Export passphrase"
+            placeholder={t("export.passphrase.placeholder", "Export passphrase")}
             autoFocus
           />
           <StrengthMeter value={passphrase} />
@@ -123,7 +135,7 @@ export function ExportPassphraseSheet({
             onChange={setConfirm}
             autoComplete="new-password"
             minLength={10}
-            placeholder="Confirm passphrase"
+            placeholder={t("export.confirm.placeholder", "Confirm passphrase")}
             delay={0.05}
           />
 
@@ -131,12 +143,12 @@ export function ExportPassphraseSheet({
 
           <div className="pt-1">
             <PrimaryButton type="submit" loading={busy} disabled={!canSubmit}>
-              Download .avf backup
+              {t("export.download", "Download .avf backup")}
             </PrimaryButton>
           </div>
 
           <p className="pt-1 text-[11.5px]" style={{ color: MUTED, lineHeight: 1.5 }}>
-            The file is encrypted end-to-end with AES-256-GCM. Lose the passphrase and the backup is unrecoverable.
+            {t("export.footnote", "The file is encrypted end-to-end with AES-256-GCM. Lose the passphrase and the backup is unrecoverable.")}
           </p>
         </form>
       </motion.div>
