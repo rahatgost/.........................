@@ -31,6 +31,9 @@ import {
   type HibpResult,
   type VaultHealthReport,
 } from "@/lib/vault-health";
+import { usePlan } from "@/hooks/use-plan";
+import { UpgradePrompt } from "@/components/aegis/upgrade-prompt";
+
 
 /**
  * Phase 9.3 — Vault health.
