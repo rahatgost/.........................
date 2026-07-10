@@ -283,7 +283,10 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
-        <Toaster position="top-center" richColors closeButton />
+        {/* `richColors` intentionally omitted — sonner's built-in bright
+            green/red overrides our Aegis-tinted variants. See
+            `src/components/ui/sonner.tsx` for the palette-matched styling. */}
+        <Toaster position="top-center" closeButton />
       </QueryClientProvider>
     </I18nProvider>
   );
