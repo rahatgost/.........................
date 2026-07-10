@@ -347,9 +347,8 @@ function AuthPage() {
               {t("auth.backToSignin", "Back to sign in")}
             </button>
           )}
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </StarfieldHeroLayout>
   );
 }
 
