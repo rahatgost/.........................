@@ -622,6 +622,7 @@ export async function setAccountTags(
   id: string,
   tags: string[],
 ): Promise<{ tags: string[]; queued: boolean }> {
+  assertWritable();
   const normalized = normalizeTagList(tags);
   const attempt = async () => {
     const { data, error } = await supabase
