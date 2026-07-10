@@ -577,7 +577,7 @@ function LockPage() {
     <StarfieldHeroLayout
       heroKey="unlock"
       heroTitle="Unlock your vault"
-      heroSubtitle="Use your passphrase, PIN, or biometrics to decrypt your codes on this device."
+      heroMinVh={16}
     >
       <SegmentedTabs
         value={tab}
