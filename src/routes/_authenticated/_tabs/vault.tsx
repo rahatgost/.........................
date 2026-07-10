@@ -469,8 +469,14 @@ function VaultPage() {
     void (async () => {
       try {
         await requestPersistentStorage();
-        const status = await getStorageStatus();
+        let status = await getStorageStatus();
         if (cancelled) return;
+        // First response: silently evict non-essential caches (avatars)
+        // and re-measure before nagging the user.
+        if (status.nearLimit) {
+          status = await evictNonEssentialCaches();
+          if (cancelled) return;
+        }
         if (status.nearLimit && status.ratio !== null) {
           const pct = Math.round(status.ratio * 100);
           toast.warning(
