@@ -40,6 +40,7 @@ import {
   enqueueUpdateDetails,
   flushOutbox,
   outboxSize,
+  pendingFavoriteFor,
   type CreatePayload,
 } from "@/lib/vault-outbox";
 
@@ -860,37 +861,11 @@ export async function listAccounts(dek: CryptoKey): Promise<DecryptedAccount[]> 
  * Returns `{ source: 'network' | 'cache' | 'empty' }` so the UI can show an
  * "offline — showing cached codes" banner when appropriate.
  */
-export async function listAccountsWithCache(
-  dek: CryptoKey,
-  userId: string,
-): Promise<{ accounts: DecryptedAccount[]; source: "network" | "cache" | "empty" }> {
-  const online = !isOffline();
-  if (online) {
-    try {
-      // Flush any tag edits queued while offline BEFORE reading, so the
-      // fetched rows already reflect them.
-      await flushPendingTagUpdates().catch(() => 0);
-      const { data, error } = await supabase
-        .from("vault_accounts")
-        .select(ACCOUNT_SELECT)
-        .order("is_favorite", { ascending: false })
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const rows = (data ?? []) as VaultAccountRecord[];
-      void writeVaultCache(userId, rows);
-      const accounts = await decryptRows(dek, rows);
-      return { accounts, source: "network" };
-    } catch {
-      // Network error mid-flight — fall through to cache below.
-    }
-  }
-
-  const cached = await readVaultCache(userId);
-  if (!cached) return { accounts: [], source: "empty" };
-  const accounts = await decryptRows(dek, cached);
-  return { accounts, source: "cache" };
-}
+// Removed: legacy `listAccountsWithCache` (single-shot cache-or-network
+// entry point). The vault now uses the SWR pair below —
+// `readCachedAccountsOnly` for the immediate cache paint and
+// `syncAccountsFromServer` for the background refresh — which gives us
+// finer-grained control over the offline banner and stale-time labels.
 
 // ---------------------------------------------------------------------------
 // Phase 6.2: cache-first read + delta sync
@@ -927,10 +902,15 @@ export function mergeAccountRows(
   recentFavToggles: Record<string, boolean>,
 ): VaultAccountRecord[] {
   return serverRows.map((row) => {
-    const override = recentFavToggles[row.id];
-    if (override === undefined) return row;
-    if (row.is_favorite === override) return row;
-    return { ...row, is_favorite: override };
+    // Outbox intent is authoritative until it flushes — a stuck favorite
+    // entry (e.g. failing writes over many minutes) must keep winning the
+    // merge even after the 60s optimistic window expires. Fall back to
+    // the fresh optimistic map only when nothing is queued.
+    const queued = pendingFavoriteFor(row.id);
+    const effective = queued !== undefined ? queued : recentFavToggles[row.id];
+    if (effective === undefined) return row;
+    if (row.is_favorite === effective) return row;
+    return { ...row, is_favorite: effective };
   });
 }
 

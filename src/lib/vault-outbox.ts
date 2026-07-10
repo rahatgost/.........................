@@ -185,6 +185,27 @@ export function outboxSize(): number {
   return readQueue().length;
 }
 
+/**
+ * Effective pending favorite value for an id, taking the most recent
+ * intent into account:
+ *   • the queued `create`'s `is_favorite` field, OR
+ *   • the latest `favorite` entry for that id.
+ * Returns `undefined` when nothing is queued. Used by `mergeAccountRows`
+ * so a stuck outbox entry keeps winning the merge past the optimistic
+ * 60s window — the intent is the source of truth until it flushes.
+ */
+export function pendingFavoriteFor(id: string): boolean | undefined {
+  const q = readQueue();
+  let value: boolean | undefined;
+  for (const e of q) {
+    if (e.id !== id) continue;
+    if (e.kind === "create") value = e.payload.is_favorite;
+    else if (e.kind === "favorite") value = e.isFavorite;
+    else if (e.kind === "delete") value = undefined;
+  }
+  return value;
+}
+
 export function clearOutbox(): void {
   writeQueue([]);
 }

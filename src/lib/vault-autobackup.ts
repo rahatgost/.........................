@@ -410,21 +410,40 @@ function markDirty() {
   }, DIRTY_DEBOUNCE_MS);
 }
 
-function onOnline() {
-  // Coming back online: if a change happened while offline, flush right away.
+function onSyncTick() {
+  // Coming back online, or tab regained focus/visibility — if a change
+  // happened while offline, flush right away via the sync coordinator so
+  // multi-tab users don't double-upload.
   if (dirty) tryFlushDirty();
 }
+
+let coordinatorUnsub: (() => void) | null = null;
 
 function attachWindowListeners() {
   if (typeof window === "undefined") return;
   window.addEventListener(VAULT_CHANGED_EVENT, markDirty);
-  window.addEventListener("online", onOnline);
+  // Subscribe to the shared sync coordinator (reachability + focus +
+  // visibility + cross-tab lock) instead of the raw `online` event so
+  // autobackup fires on captive-portal recovery and background→foreground
+  // returns too.
+  import("./sync-coordinator")
+    .then(({ onSyncOpportunity }) => {
+      coordinatorUnsub = onSyncOpportunity(onSyncTick);
+    })
+    .catch(() => {
+      // Fallback: raw `online` event so we never lose backup coverage.
+      window.addEventListener("online", onSyncTick);
+    });
 }
 
 function detachWindowListeners() {
   if (typeof window === "undefined") return;
   window.removeEventListener(VAULT_CHANGED_EVENT, markDirty);
-  window.removeEventListener("online", onOnline);
+  window.removeEventListener("online", onSyncTick);
+  if (coordinatorUnsub) {
+    coordinatorUnsub();
+    coordinatorUnsub = null;
+  }
 }
 
 let windowListenersAttached = false;

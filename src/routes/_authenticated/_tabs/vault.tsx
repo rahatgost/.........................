@@ -43,9 +43,10 @@ import {
   listQueuedTagUpdates,
 } from "@/lib/vault-tag-queue";
 import { useOnlineStatus } from "@/lib/use-online";
-import { onSyncOpportunity } from "@/lib/sync-coordinator";
+import { onSyncOpportunity, onCacheMutation } from "@/lib/sync-coordinator";
 import { requestPersistentStorage, getStorageStatus, evictNonEssentialCaches } from "@/lib/storage-quota";
-import { deadLetterCount } from "@/lib/vault-outbox";
+import { deadLetterCount, resetOutboxEntry, deadLetterEntries } from "@/lib/vault-outbox";
+import { useReachable } from "@/lib/reachability";
 import { AccountCard } from "@/components/vault/AccountCard";
 import { PRESET_TAGS, TagChip } from "@/components/vault/tags";
 import { ExportPassphraseSheet } from "@/components/vault/ExportPassphraseSheet";
@@ -169,7 +170,12 @@ function VaultPage() {
     () => (typeof window === "undefined" ? 0 : pendingOutboxCount()),
   );
   const [syncingTags, setSyncingTags] = useState(false);
-  const online = useOnlineStatus();
+  // Combine navigator.onLine with the real reachability probe so the
+  // offline banner surfaces captive-portal / stalled-network states, not
+  // just OS-level "no interfaces".
+  const navOnline = useOnlineStatus();
+  const reachable = useReachable();
+  const online = navOnline && reachable;
 
   const refreshPendingCount = useCallback(() => {
     setPendingTagCount(listQueuedTagUpdates().length);
@@ -519,8 +525,10 @@ function VaultPage() {
           );
           setReloadKey((k) => k + 1);
         }
-        // Surface stuck entries once per mount so the user knows silent
-        // retries aren't going to save them.
+        // Surface stuck entries once per mount with an actionable retry:
+        // reset the attempts counter on every dead-letter entry, then
+        // request an immediate flush. Discards the last-known error;
+        // useful when the user knows the underlying cause is fixed.
         const stuck = deadLetterCount();
         if (stuck > 0 && !warnedDeadLetter) {
           warnedDeadLetter = true;
@@ -529,14 +537,42 @@ function VaultPage() {
               stuck === 1
                 ? "vault.toast.deadLetter.one"
                 : "vault.toast.deadLetter.other",
-              `${stuck} change${stuck === 1 ? "" : "s"} can't sync — check your vault.`,
+              `${stuck} change${stuck === 1 ? "" : "s"} can't sync.`,
               { count: stuck },
             ),
+            {
+              action: {
+                label: t("vault.toast.deadLetter.retry", "Retry"),
+                onClick: () => {
+                  for (const e of deadLetterEntries()) resetOutboxEntry(e.id);
+                  void flushPendingOutbox().then(() => {
+                    setPendingOutbox(pendingOutboxCount());
+                    setReloadKey((k) => k + 1);
+                  });
+                },
+              },
+              duration: 10_000,
+            },
           );
         }
       } catch {
         // best-effort; the coordinator will fire again on the next
         // reachable / focus / visibility event.
+      }
+    });
+  }, []);
+
+  // Cross-tab sync: when a sibling tab mutates the vault / outbox / tags
+  // caches, re-render so we see their changes without waiting for the
+  // next server sync.
+  useEffect(() => {
+    return onCacheMutation((surface) => {
+      if (surface === "vault" || surface === "outbox") {
+        setReloadKey((k) => k + 1);
+      }
+      if (surface === "outbox" || surface === "tags") {
+        setPendingOutbox(pendingOutboxCount());
+        setPendingTagCount(listQueuedTagUpdates().length);
       }
     });
   }, []);
