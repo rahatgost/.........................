@@ -189,6 +189,40 @@ export function clearOutbox(): void {
   writeQueue([]);
 }
 
+/**
+ * Entries that have failed at least `DEAD_LETTER_THRESHOLD` times are
+ * considered "stuck" — usually a permanent server-side rejection (schema
+ * mismatch, quota exceeded, RLS violation) rather than a transient
+ * network hiccup. The UI surfaces these separately so the user can
+ * intervene instead of trusting silent retries forever.
+ */
+export const DEAD_LETTER_THRESHOLD = 6;
+
+export function deadLetterEntries(): OutboxEntry[] {
+  return readQueue().filter(
+    (e) => ((e as { attempts?: number }).attempts ?? 0) >= DEAD_LETTER_THRESHOLD,
+  );
+}
+
+export function deadLetterCount(): number {
+  return deadLetterEntries().length;
+}
+
+/**
+ * Reset the retry counter on a stuck entry so the user can force a
+ * fresh attempt from the UI. Missing id is a no-op.
+ */
+export function resetOutboxEntry(id: string): void {
+  const q = readQueue();
+  let changed = false;
+  const next = q.map((e) => {
+    if (e.id !== id) return e;
+    changed = true;
+    return { ...e, attempts: 0, nextRetryAt: 0 } as OutboxEntry;
+  });
+  if (changed) writeQueue(next);
+}
+
 export interface OutboxAppliers {
   create: (id: string, payload: CreatePayload) => Promise<void>;
   delete: (id: string) => Promise<void>;
