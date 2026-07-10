@@ -1815,9 +1815,13 @@ function RingTimer({
           style={{ transition: "stroke-dashoffset 0.24s linear, stroke 0.2s ease" }}
         />
       </svg>
-      <span className="absolute tabular-nums" style={{ ...typeTimer, color }}>
+      <span
+        className="absolute tabular-nums"
+        style={{ ...typeTimer, color, transition: "color 0.2s ease" }}
+      >
         {remaining}
       </span>
+
 
     </div>
   );
