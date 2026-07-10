@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MUTED } from "@/components/aegis/chrome";
 import { StarfieldHeroLayout } from "@/components/aegis/starfield-hero";
 
-export const Route = createFileRoute("/auth/callback")({
+export const Route = createFileRoute("/auth_/callback")({
   ssr: false,
   head: () => ({
     meta: [
