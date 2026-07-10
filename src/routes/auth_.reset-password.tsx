@@ -10,7 +10,7 @@ import {
   StarfieldHeroLayout,
 } from "@/components/aegis/starfield-hero";
 
-export const Route = createFileRoute("/auth/reset-password")({
+export const Route = createFileRoute("/auth_/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
