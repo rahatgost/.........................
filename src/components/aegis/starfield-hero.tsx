@@ -1,7 +1,16 @@
 import { useMemo, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Shield } from "lucide-react";
-import { CREAM, CHARCOAL, soft } from "@/components/aegis/chrome";
+import { Loader2, Shield } from "lucide-react";
+import {
+  BORDER,
+  CHARCOAL,
+  CREAM,
+  CREAM_SOFT,
+  DANGER,
+  MUTED,
+  soft,
+  spring,
+} from "@/components/aegis/chrome";
 
 /* -------------------------------------------------------------------------- */
 /*  Shared dark-hero + cream-sheet layout for auth / reset / callback flows.  */
