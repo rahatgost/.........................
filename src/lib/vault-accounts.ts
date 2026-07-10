@@ -988,6 +988,7 @@ export async function getLastSyncedAt(userId: string): Promise<string | null> {
  * belt-and-braces guard.
  */
 export async function reorderAccounts(orderedIds: string[]): Promise<void> {
+  assertWritable();
   if (orderedIds.length === 0) return;
   const updates = orderedIds.map((id, index) => ({ id, sort_order: index }));
   await patchCacheSortOrders(updates);
