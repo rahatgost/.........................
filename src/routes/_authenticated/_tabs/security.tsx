@@ -31,6 +31,7 @@ import { ExtensionTrustSection } from "@/components/aegis/extension-trust-sectio
 import { ApprovalSection } from "@/components/aegis/approval-section";
 import { SignInHistorySection } from "@/components/aegis/signin-history-section";
 import { VaultHealthHero } from "@/components/aegis/vault-health-hero";
+import { VaultHealthTips } from "@/components/aegis/vault-health-tips";
 
 import { Switch } from "@/components/ui/switch";
 import { setHideCodes, useHideCodes } from "@/lib/vault-privacy";
