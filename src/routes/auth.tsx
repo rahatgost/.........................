@@ -275,26 +275,7 @@ function AuthPage() {
               </div>
             )}
 
-            {notice && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={soft}
-                className="rounded-[10px] px-3 py-2 text-[12.5px] leading-snug"
-                style={{
-                  background:
-                    notice.kind === "error"
-                      ? "rgb(var(--aegis-danger-rgb) / 0.08)"
-                      : "rgb(var(--aegis-ink-rgb) / 0.05)",
-                  color: notice.kind === "error" ? DANGER : CHARCOAL,
-                  border: `1px solid ${
-                    notice.kind === "error" ? "rgb(var(--aegis-danger-rgb) / 0.15)" : BORDER
-                  }`,
-                }}
-              >
-                {notice.text}
-              </motion.div>
-            )}
+            {notice && <InlineNotice kind={notice.kind}>{notice.text}</InlineNotice>}
 
             <BlueButton
               type="submit"
