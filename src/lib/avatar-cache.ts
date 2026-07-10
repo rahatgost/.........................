@@ -54,6 +54,22 @@ export async function clearAvatarBlob(userId: string): Promise<void> {
 }
 
 /**
+ * Wipe every cached avatar blob. Used by the storage-pressure evictor
+ * so we free space before the OS silently evicts our vault mirror.
+ * Avatars refetch on next network load, so this is safe to call any
+ * time.
+ */
+export async function clearAllAvatarBlobs(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.clear(STORE);
+  } catch {
+    // best-effort
+  }
+}
+
+/**
  * Try to warm-cache a signed URL: fetch the bytes and store the blob so
  * later loads (including offline) can render immediately. Failures are
  * swallowed — this is a best-effort cache prime.
