@@ -1029,7 +1029,11 @@ function Keypad({
   }, [onDigit, onDelete, onSubmit, submitReady]);
 
   return (
-    <div ref={btnRef} className="grid grid-cols-3 gap-2">
+    <div
+      ref={btnRef}
+      className="grid w-full grid-cols-3 gap-2 sm:gap-2.5"
+      style={{ gridAutoRows: "minmax(52px, 1fr)" }}
+    >
       {keys.map((k, i) => {
         if (k === "") return <span key={i} />;
         if (k === "del") {
@@ -1059,11 +1063,33 @@ function Keypad({
         }
         return (
           <KeypadButton key={i} onClick={() => onDigit(k)} ariaLabel={`Digit ${k}`}>
-            <span className="text-[19px] font-semibold tabular-nums">{k}</span>
+            <span className="text-[20px] font-semibold tabular-nums leading-none">{k}</span>
           </KeypadButton>
         );
       })}
     </div>
+  );
+}
+
+function VaultIllustration() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: "spring", stiffness: 220, damping: 24, mass: 0.9 }}
+      className="mx-auto -mt-2 flex w-full items-center justify-center"
+      aria-hidden
+    >
+      <img
+        src={vaultIllustration.url}
+        alt=""
+        draggable={false}
+        className="pointer-events-none h-[112px] w-auto select-none sm:h-[128px]"
+        style={{
+          filter: "drop-shadow(0 18px 24px rgba(15,15,32,0.18))",
+        }}
+      />
+    </motion.div>
   );
 }
 
