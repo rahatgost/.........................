@@ -35,7 +35,7 @@ export async function logServer(
       route: ctx.route ?? null,
       request_id: ctx.requestId ?? null,
       user_id: ctx.userId ?? null,
-      meta: ctx.meta ?? null,
+      meta: (ctx.meta ?? null) as never,
     });
   } catch {
     // Logging must never break the request path.

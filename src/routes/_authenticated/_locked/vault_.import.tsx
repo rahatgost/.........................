@@ -493,7 +493,7 @@ function SegButton({
   );
 }
 
-function PasteTab({
+export function PasteTab({
   value,
   onChange,
   onSubmit,
@@ -882,7 +882,7 @@ function ScanTab({
   );
 }
 
-function AvfPassStage({
+export function AvfPassStage({
   passphrase,
   onChange,
   busy,
