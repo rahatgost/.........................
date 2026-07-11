@@ -617,7 +617,7 @@ function LockPage() {
   return (
     <StarfieldHeroLayout
       heroKey="unlock"
-      heroTitle={<span className="block max-w-[62%] sm:max-w-[70%]">Unlock your vault</span>}
+      heroTitle={<span className="block max-w-[68%] sm:max-w-[72%]">Unlock your vault</span>}
       heroMinVh={22}
       heroAccessory={<VaultIllustration />}
     >
