@@ -131,17 +131,27 @@ export function StarfieldHeroLayout({
       <div
         className="relative shrink-0"
         style={{
-          minHeight: `clamp(150px, ${heroMinVh}dvh, 320px)`,
+          minHeight: `clamp(170px, ${heroMinVh}dvh, 320px)`,
           maxHeight: "45dvh",
         }}
       >
         <Starfield />
         {heroAccessory && (
-          <div className="pointer-events-none absolute right-0 top-0 z-[5] h-full w-[48%] max-w-[240px]">
-            {heroAccessory}
+          <div className="pointer-events-none absolute right-[-8px] top-0 z-[5] h-full w-[46%] max-w-[240px]">
+            {/* soft warm halo behind the illustration to anchor the composition */}
+            <div
+              aria-hidden
+              className="absolute right-[8%] top-1/2 h-[62%] w-[78%] -translate-y-1/2 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(closest-side, rgba(79,107,255,0.32), rgba(79,107,255,0) 70%)",
+                filter: "blur(6px)",
+              }}
+            />
+            <div className="relative h-full w-full">{heroAccessory}</div>
           </div>
         )}
-        <div className="relative z-10 flex h-full flex-col px-5 pt-[max(20px,env(safe-area-inset-top))] pb-5 sm:px-6 sm:pb-6">
+        <div className="relative z-10 flex h-full flex-col px-5 pt-[max(20px,env(safe-area-inset-top))] pb-6 sm:px-6 sm:pb-7">
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -150,7 +160,35 @@ export function StarfieldHeroLayout({
             <BrandRow />
           </motion.div>
 
-          <div className="mt-4 flex flex-col gap-2 sm:mt-6 sm:gap-2.5">
+          <div className="mt-auto flex flex-col gap-2.5 pr-[42%] sm:gap-3">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={(heroKey ?? "") + "-eyebrow"}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={soft}
+                className="flex items-center gap-2"
+              >
+                <span
+                  aria-hidden
+                  className="h-[1px] w-6"
+                  style={{ background: "rgba(255,255,255,0.35)" }}
+                />
+                <span
+                  className="text-white/70"
+                  style={{
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Secure access
+                </span>
+              </motion.div>
+            </AnimatePresence>
 
             <AnimatePresence mode="wait" initial={false}>
               <motion.h1
@@ -162,10 +200,11 @@ export function StarfieldHeroLayout({
                 className="text-white"
                 style={{
                   fontFamily: "'Playfair Display', serif",
-                  fontSize: "clamp(30px, 8.5vw, 40px)",
-                  lineHeight: 1.05,
+                  fontSize: "clamp(32px, 9vw, 44px)",
+                  lineHeight: 1.02,
                   fontWeight: 600,
-                  letterSpacing: "-0.02em",
+                  letterSpacing: "-0.028em",
+                  textWrap: "balance" as never,
                 }}
               >
                 {heroTitle}
@@ -175,9 +214,10 @@ export function StarfieldHeroLayout({
               <motion.p
                 key={(heroKey ?? "") + "-sub"}
                 initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 0.72, y: 0 }}
+                animate={{ opacity: 0.78, y: 0 }}
                 transition={{ ...soft, delay: 0.05 }}
-                className="max-w-[36ch] text-[14.5px] leading-[1.5] text-white"
+                className="max-w-[32ch] text-[13.5px] leading-[1.55] text-white"
+                style={{ letterSpacing: "-0.005em" }}
               >
                 {heroSubtitle}
               </motion.p>
