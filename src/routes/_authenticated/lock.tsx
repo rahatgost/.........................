@@ -1107,7 +1107,7 @@ function KeypadButton({
   ariaLabel?: string;
 }) {
   const base =
-    "flex h-[48px] items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-1 transition-colors disabled:opacity-40";
+    "flex h-full min-h-[52px] w-full items-center justify-center rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-offset-1 transition-colors disabled:opacity-40 touch-manipulation select-none";
   const styles: Record<typeof variant, React.CSSProperties> = {
     digit: {
       background: CREAM_SOFT,
@@ -1137,7 +1137,7 @@ function KeypadButton({
       className={base}
       style={{
         ...styles[variant],
-        maxHeight: 78,
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       {children}
