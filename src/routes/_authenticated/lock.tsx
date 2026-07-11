@@ -44,6 +44,7 @@ import {
   StarfieldHeroLayout,
 } from "@/components/aegis/starfield-hero";
 import { PasswordField, StrengthMeter, scoreStrength } from "@/components/aegis/password-field";
+import vaultIllustration from "@/assets/vault-illustration.png.asset.json";
 
 /* Charcoal primary button — matches onboarding's PrimaryButton language. */
 const INK_INSET_SHADOW =
