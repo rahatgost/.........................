@@ -1146,7 +1146,6 @@ export function AccountCard({
                         className="mt-1 inline-flex items-center gap-1 text-[10px]"
                         style={{
                           color: MUTED,
-                          fontFamily: "'JetBrains Mono', monospace",
                           letterSpacing: "0.14em",
                         }}
                       >
@@ -1210,7 +1209,6 @@ export function AccountCard({
                           className="tabular-nums text-[13px]"
                           style={{
                             color: revealed || warn ? CHARCOAL : MUTED,
-                            fontFamily: "'JetBrains Mono', monospace",
                             fontFeatureSettings: "'tnum'",
                             letterSpacing: "0.12em",
                             fontWeight: 600,

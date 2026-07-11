@@ -1176,7 +1176,6 @@ function AvatarActionSheet({
           <div
             className="text-[15px]"
             style={{
-              fontFamily: "'Playfair Display', serif",
               fontWeight: 600,
               color: CHARCOAL,
               letterSpacing: "-0.01em",

@@ -659,7 +659,6 @@ function ChangePassphraseSheet({
             <div
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,
@@ -782,7 +781,6 @@ function AutoLockSheet({
             <div
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,
@@ -920,7 +918,6 @@ function ExportSheet({
             <div
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,
@@ -1129,7 +1126,6 @@ function CloudBackupSheet({
             <div
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,
@@ -1435,7 +1431,6 @@ function AutoBackupSheet({
             <div
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,

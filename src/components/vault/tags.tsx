@@ -260,7 +260,6 @@ export function TagInput({ value, onChange, extras }: TagInputProps) {
           className="text-[10.5px]"
           style={{
             color: MUTED,
-            fontFamily: "'JetBrains Mono', monospace",
             letterSpacing: "0.08em",
           }}
         >

@@ -284,7 +284,6 @@ export function VaultHealthHero() {
                   className="leading-none"
                   style={{
                     color: CHARCOAL,
-                    fontFamily: "'Playfair Display', serif",
                     fontWeight: 600,
                     fontSize: 48,
                     letterSpacing: "-1.2px",

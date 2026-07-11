@@ -281,7 +281,6 @@ function HistorySheet({
               id={titleId}
               className="text-[18px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: CHARCOAL,

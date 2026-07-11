@@ -700,9 +700,6 @@ function FieldRow({
         className="min-w-0 flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-[color:var(--aegis-placeholder)]"
         style={{
           color: CHARCOAL,
-          fontFamily: mono
-            ? "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
-            : undefined,
           letterSpacing: mono ? "0.06em" : "-0.005em",
           fontWeight: 500,
         }}

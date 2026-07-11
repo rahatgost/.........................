@@ -363,7 +363,7 @@ function IncomingShareCard({ share }: { share: IncomingShare }) {
         </div>
       </div>
       <div
-        className="flex items-center gap-2 rounded-md px-2 py-1 font-mono text-[15px] tracking-[0.14em]"
+        className="flex items-center gap-2 rounded-md px-2 py-1 text-[15px] tracking-[0.14em]"
         style={{ color: CHARCOAL, background: "rgb(var(--aegis-ink-rgb) / 0.05)" }}
       >
         <span>{code}</span>

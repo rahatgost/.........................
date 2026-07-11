@@ -518,7 +518,6 @@ export function PasteTab({
           background: CREAM_SOFT,
           border: `1px solid ${BORDER}`,
           color: CHARCOAL,
-          fontFamily: "'JetBrains Mono', monospace",
           letterSpacing: "0.01em",
           lineHeight: 1.5,
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
@@ -708,7 +707,6 @@ function PreviewStage({
                 className="text-[10.5px] uppercase"
                 style={{
                   color: MUTED,
-                  fontFamily: "'JetBrains Mono', monospace",
                   letterSpacing: "0.15em",
                 }}
               >

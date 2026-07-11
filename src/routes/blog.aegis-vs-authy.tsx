@@ -103,7 +103,6 @@ function ComparisonPage() {
           className="mb-4 text-[11px] uppercase"
           style={{
             color: "var(--aegis-muted)",
-            fontFamily: "'JetBrains Mono', monospace",
             letterSpacing: "0.22em",
           }}
         >

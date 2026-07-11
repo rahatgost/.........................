@@ -200,10 +200,10 @@ function TokenCard({ name, note, tick }: { name: string; note?: string; tick: nu
         aria-hidden
       />
       <div className="px-3 py-2.5">
-        <div className="font-mono text-[12px]" style={{ color: "var(--aegis-ink)" }}>
+        <div className="text-[12px]" style={{ color: "var(--aegis-ink)" }}>
           {name}
         </div>
-        <div className="mt-1 font-mono text-[11px]" style={{ color: "var(--aegis-muted)" }}>
+        <div className="mt-1 text-[11px]" style={{ color: "var(--aegis-muted)" }}>
           {resolved || "—"}
         </div>
         {note && (

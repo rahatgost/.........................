@@ -15,6 +15,9 @@ Review the full project, address major issues and improvements. Scope was refine
 - Unified authentication, callback and lock visuals; removed legacy blue accents.
 - Added critical auth screen test IDs and fixed the previously reported intermittent hydration/blank-paint issue.
 - Verified with TypeScript, linting, production build, and three consecutive mobile auth renders without console hydration errors.
+- Reworked the shared vault/page header into a direct, large modern mobile title; removed the repeated “Aegis Vault” eyebrow and decorative line from all pages using it.
+- Unified the entire app’s type system to Geist: removed legacy Playfair Display/JetBrains Mono references, CSS variables, and font loading.
+- Verified the production mobile auth screen at 375px after the type-system update.
 
 ## Prioritized backlog
 - **P0:** Provide a test account or test session to validate authenticated vault, family, emergency, import and onboarding screens end-to-end on mobile.

@@ -297,7 +297,6 @@ export function HealthSheet({
               id={titleId}
               className="text-[24px]"
               style={{
-                fontFamily: "'Playfair Display', serif",
                 fontWeight: 600,
                 letterSpacing: "-0.5px",
                 lineHeight: 1.1,
@@ -414,7 +413,6 @@ export function HealthSheet({
                   <span
                     style={{
                       color: CHARCOAL,
-                      fontFamily: "'Playfair Display', serif",
                       fontWeight: 600,
                       fontSize: 56,
                       letterSpacing: "-1.5px",

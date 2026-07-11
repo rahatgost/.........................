@@ -1288,7 +1288,6 @@ function TagFilterRow({
               ...typeBadge,
               background: CHARCOAL,
               fontWeight: 700,
-              fontFamily: "var(--font-mono)",
               letterSpacing: "0.06em",
             }}
           >
@@ -1342,7 +1341,6 @@ function TagFilterRow({
                   className="text-[10px] tabular-nums"
                   style={{
                     color: isActive ? "color-mix(in oklab, var(--aegis-cream-soft) 70%, transparent)" : MUTED,
-                    fontFamily: "'JetBrains Mono', monospace",
                     letterSpacing: "0.04em",
                   }}
                 >
