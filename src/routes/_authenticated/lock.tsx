@@ -617,11 +617,10 @@ function LockPage() {
   return (
     <StarfieldHeroLayout
       heroKey="unlock"
-      heroTitle="Unlock your vault"
-      heroMinVh={16}
+      heroTitle={<span className="block max-w-[62%] sm:max-w-[70%]">Unlock your vault</span>}
+      heroMinVh={22}
+      heroAccessory={<VaultIllustration />}
     >
-      <VaultIllustration />
-
       <SegmentedTabs
         value={tab}
         onChange={(next) => {
