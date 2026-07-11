@@ -286,16 +286,19 @@ export function BlueButton({
   loading,
   disabled,
   onClick,
+  testId,
 }: {
   children: ReactNode;
   type?: "button" | "submit";
   loading?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  testId?: string;
 }) {
   return (
     <motion.button
       type={type}
+      data-testid={testId}
       onClick={onClick}
       disabled={disabled || loading}
       whileTap={disabled || loading ? undefined : { scale: 0.985, opacity: 0.95 }}

@@ -23,6 +23,7 @@ interface Props {
   required?: boolean;
   delay?: number;
   icon?: React.ReactNode;
+  testId?: string;
 }
 
 /** Password / passphrase input with show-hide toggle + caps-lock warning. */
@@ -36,6 +37,7 @@ export function PasswordField({
   required = true,
   delay = 0,
   icon,
+  testId,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const [caps, setCaps] = useState(false);
@@ -71,6 +73,7 @@ export function PasswordField({
           {icon ?? <Lock className="h-4 w-4" strokeWidth={1.6} />}
         </span>
         <input
+          data-testid={testId}
           type={visible ? "text" : "password"}
           autoComplete={autoComplete}
           required={required}
@@ -87,6 +90,7 @@ export function PasswordField({
           tabIndex={-1}
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? "Hide password" : "Show password"}
+          data-testid={testId ? `${testId}-visibility-button` : undefined}
           className="rounded p-1 transition-opacity hover:opacity-100"
           style={{ color: MUTED, opacity: 0.7 }}
         >

@@ -27,7 +27,6 @@ import {
 const LAST_EMAIL_KEY = "aegis.auth.lastEmail";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "Sign in to Aegis — Secure TOTP authenticator" },
@@ -193,6 +192,7 @@ function AuthPage() {
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0" strokeWidth={1.6} style={{ color: MUTED }} />
                 <input
+                  data-testid="auth-email-input"
                   type="email"
                   autoComplete="email"
                   required
@@ -223,6 +223,7 @@ function AuthPage() {
                       {t("auth.field.password", "Password")}
                     </span>
                     <PasswordField
+                      testId="auth-password-input"
                       value={password}
                       onChange={setPassword}
                       autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -248,6 +249,7 @@ function AuthPage() {
                 <label className="flex cursor-pointer items-center gap-2 select-none" style={{ color: MUTED }}>
                   <input
                     type="checkbox"
+                    data-testid="auth-remember-checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
                     className="h-[15px] w-[15px] rounded-[4px] border"
@@ -257,6 +259,7 @@ function AuthPage() {
                 </label>
                 <button
                   type="button"
+                  data-testid="auth-forgot-password-button"
                   onClick={() => {
                     setNotice(null);
                     setMode("reset");
@@ -272,6 +275,7 @@ function AuthPage() {
             {notice && <InlineNotice kind={notice.kind}>{notice.text}</InlineNotice>}
 
             <BlueButton
+              testId="auth-submit-button"
               type="submit"
               loading={loading}
               disabled={
@@ -298,6 +302,7 @@ function AuthPage() {
 
           <button
             type="button"
+            data-testid="auth-google-button"
             onClick={handleGoogle}
             disabled={loading}
             className="flex h-[48px] w-full items-center justify-center gap-3 rounded-[12px] text-[14.5px] font-medium transition-colors disabled:opacity-60"
@@ -315,6 +320,7 @@ function AuthPage() {
           {mode === "reset" && (
             <button
               type="button"
+              data-testid="auth-back-to-signin-button"
               onClick={() => setMode("signin")}
               className="mx-auto text-[13px] font-medium"
               style={{ color: CHARCOAL }}
@@ -354,6 +360,7 @@ function SegmentedTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => 
         <button
           key={k}
           type="button"
+          data-testid={`auth-${k}-tab`}
           onClick={() => onChange(k)}
           className="relative z-10 flex items-center justify-center text-[14px] font-medium transition-colors"
           style={{
