@@ -435,6 +435,39 @@ export type Database = {
         }
         Relationships: []
       }
+      server_logs: {
+        Row: {
+          at: string
+          id: string
+          level: string
+          message: string
+          meta: Json | null
+          request_id: string | null
+          route: string | null
+          user_id: string | null
+        }
+        Insert: {
+          at?: string
+          id?: string
+          level?: string
+          message: string
+          meta?: Json | null
+          request_id?: string | null
+          route?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          at?: string
+          id?: string
+          level?: string
+          message?: string
+          meta?: Json | null
+          request_id?: string | null
+          route?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       share_lookup_attempts: {
         Row: {
           attempted_at: string
@@ -803,6 +836,7 @@ export type Database = {
       is_family_admin: { Args: { _user_id?: string }; Returns: boolean }
       purge_old_client_errors: { Args: { days?: number }; Returns: number }
       purge_old_login_events: { Args: { days?: number }; Returns: number }
+      purge_old_server_logs: { Args: { days?: number }; Returns: number }
       purge_old_share_lookup_attempts: {
         Args: { minutes?: number }
         Returns: number
