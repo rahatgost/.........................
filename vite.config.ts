@@ -7,6 +7,16 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
+const LOVABLE_CLOUD_URL = "https://oegkpbuziwipyrmjeqaf.supabase.co";
+const LOVABLE_CLOUD_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Im9lZ2twYnV6aXdpcHlybWplcWFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzc1OTksImV4cCI6MjA5ODc1MzU5OX0.cFYXsHRQ6uApE-SN_fXer4pCpIQqGogbhssglQzLRcc";
+
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? LOVABLE_CLOUD_URL;
+const supabasePublishableKey =
+  process.env.SUPABASE_PUBLISHABLE_KEY ??
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  LOVABLE_CLOUD_PUBLISHABLE_KEY;
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -17,18 +27,10 @@ export default defineConfig({
     define: {
       // Browser code cannot read process.env directly after publish, so bake
       // only the public Lovable Cloud connection values into the client build.
-      "process.env.SUPABASE_URL": JSON.stringify(
-        process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "",
-      ),
-      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
-      ),
-      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-        process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
-      ),
-      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
-      ),
+      "process.env.SUPABASE_URL": JSON.stringify(supabaseUrl),
+      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(supabasePublishableKey),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(supabasePublishableKey),
     },
     build: {
       rollupOptions: {
