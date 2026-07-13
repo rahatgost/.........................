@@ -915,14 +915,24 @@ function SetPassphraseSheet({
       const { salt, wrappedKey, wrappedKeyIv, kdfAlgorithm } =
         await wrapExistingDekWithPassphrase(dek, pass);
       const trimmedHint = hint.trim() ? hint.trim() : null;
-      const { error } = await supabase.from("vault_meta").insert({
-        user_id: userId,
-        kdf_salt: toByteaHex(salt),
-        kdf_algorithm: kdfAlgorithm,
-        recovery_wrapped_key: toByteaHex(wrappedKey),
-        recovery_wrapped_key_iv: toByteaHex(wrappedKeyIv),
-        passphrase_hint: trimmedHint,
-      });
+      // Upsert (not insert) so this works for every migration path:
+      //  - brand-new users (no row yet) get a fresh row inserted
+      //  - legacy users whose vault_meta was reset/orphaned overwrite it
+      //    safely, since we're wrapping the *live* DEK — every existing
+      //    ciphertext in vault_accounts stays decryptable.
+      const { error } = await supabase
+        .from("vault_meta")
+        .upsert(
+          {
+            user_id: userId,
+            kdf_salt: toByteaHex(salt),
+            kdf_algorithm: kdfAlgorithm,
+            recovery_wrapped_key: toByteaHex(wrappedKey),
+            recovery_wrapped_key_iv: toByteaHex(wrappedKeyIv),
+            passphrase_hint: trimmedHint,
+          },
+          { onConflict: "user_id" },
+        );
       if (error) throw error;
       // Drop the on-device auto-unlock key so the next launch prompts.
       disableAutoUnlock(userId);
