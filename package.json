@@ -97,6 +97,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@electron/packager": "^20.0.2",
     "@eslint/js": "^9.32.0",
     "@lingui/babel-plugin-lingui-macro": "^6.4.0",
     "@lingui/cli": "^6.4.0",
@@ -114,6 +115,7 @@
     "@zxing/library": "^0.22.0",
     "axe-core": "^4.12.1",
     "babel-plugin-macros": "^3.1.0",
+    "electron": "^43.1.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
