@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useLingui } from "@lingui/react";
 import Onboarding from "@/components/onboarding/Onboarding";
 import { supabase } from "@/integrations/supabase/client";
+import { isGuestId, markGuestOnboarded } from "@/lib/guest-user";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
