@@ -58,8 +58,10 @@ import {
   setLocalePref,
   type LocalePref,
 } from "@/lib/i18n";
+import { isGuestId } from "@/lib/guest-user";
+import { LockedSection } from "@/components/aegis/LockedSection";
 import { useLingui } from "@lingui/react";
-import { Globe } from "lucide-react";
+import { Globe, LogIn } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_tabs/profile")({
   head: () => ({
